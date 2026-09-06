@@ -151,8 +151,10 @@
     overflow: hidden;
     border: 0.5px solid var(--separator);
     border-radius: var(--radius-window);
-    background: var(--surface);
-    box-shadow: 0 4px 16px light-dark(rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.45));
+    /* The window is sized to this element, so a CSS drop shadow would be
+       clipped at the edge and read as a dark rim; the window's own shadow
+       does the lifting instead. */
+    background: var(--surface-floating);
   }
   .capsule.expanded {
     width: 220px;

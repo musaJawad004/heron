@@ -199,7 +199,7 @@
     height: 100vh;
     border: 0.5px solid var(--separator);
     border-radius: var(--radius-window);
-    background: var(--surface);
+    background: var(--surface-floating);
     overflow: hidden;
   }
   .scroll {

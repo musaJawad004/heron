@@ -13,6 +13,10 @@
   --text-secondary: light-dark(rgba(0, 0, 0, 0.55), rgba(255, 255, 255, 0.55));
   --text-tertiary: light-dark(rgba(0, 0, 0, 0.35), rgba(255, 255, 255, 0.35));
   --surface: light-dark(rgba(255, 255, 255, 0.55), rgba(30, 30, 32, 0.55));
+  /* Floating windows (popover, panel) paint their own ground: they have no
+     native material behind them, so they need to stay readable over any
+     wallpaper or window. */
+  --surface-floating: light-dark(rgba(250, 250, 252, 0.97), rgba(32, 32, 35, 0.97));
   --surface-solid: light-dark(#f6f6f7, #1f1f21);
   --hover: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.07));
   --active: light-dark(rgba(0, 0, 0, 0.09), rgba(255, 255, 255, 0.12));

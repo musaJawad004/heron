@@ -154,7 +154,36 @@ pub fn show_popover(app: &AppHandle) {
     position_popover(app, &w);
     let _ = w.show();
     let _ = w.set_focus();
+    // AppKit resets a window's level when it is ordered out and back in, so an
+    // Accessory app's popover would reappear underneath ordinary app windows.
+    // Re-assert the level and order it front every time it is shown.
+    raise_above_apps(app, POPOVER);
     POPOVER_SHOWN_AT.store(now_ms(), Ordering::Relaxed);
+}
+
+/// Put a window back at the floating level and order it in front, without
+/// activating the app. No-op off macOS, where `always_on_top` already holds.
+fn raise_above_apps(app: &AppHandle, label: &'static str) {
+    #[cfg(target_os = "macos")]
+    {
+        use objc2_app_kit::{NSStatusWindowLevel, NSWindow};
+
+        let Some(ptr) = window(app, label).and_then(|w| w.ns_window().ok()).map(|p| p as usize) else {
+            return;
+        };
+        let _ = app.run_on_main_thread(move || {
+            // SAFETY: the pointer came from Tauri for a live NSWindow (windows
+            // are only ever hidden, never destroyed) and AppKit is touched on
+            // the main thread only.
+            let ns: &NSWindow = unsafe { &*(ptr as *const NSWindow) };
+            ns.setLevel(NSStatusWindowLevel - 1);
+            ns.orderFrontRegardless();
+        });
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (app, label);
+    }
 }
 
 /// Hide the popover. On macOS also hand focus back to the app the user came
@@ -351,6 +380,7 @@ pub fn panel_resized(app: &AppHandle, width: f64, height: f64) {
         return;
     };
     let new_width = (width * scale).round() as i32;
+    let new_height = (height * scale).round() as i32;
     let edge = app.state::<AppState>().settings().panel_edge;
     let _ = w.set_size(Size::Logical(LogicalSize::new(width, height)));
     // macOS keeps the bottom-left corner on resize, so the top-left is
@@ -359,7 +389,15 @@ pub fn panel_resized(app: &AppHandle, width: f64, height: f64) {
         PanelEdge::Left => pos.x,
         PanelEdge::Right => pos.x + old.width as i32 - new_width,
     };
-    let _ = w.set_position(Position::Physical(PhysicalPosition::new(x, pos.y)));
+    // Growing the panel must not push it onto the neighbouring screen: keep it
+    // whole on the monitor it was already on (chosen from the pre-resize rect,
+    // so an expansion cannot hand it to the screen it is spilling towards).
+    let monitors = monitor_infos(app);
+    let (x, y) = match placement::monitor_for_window(&monitors, pos.x, pos.y, old.width, old.height) {
+        Some(i) => placement::clamp(x, pos.y, new_width as u32, new_height as u32, &monitors[i].work_area),
+        None => (x, pos.y),
+    };
+    let _ = w.set_position(Position::Physical(PhysicalPosition::new(x, y)));
 }
 
 /// One background thread for the panel: debounced snap/persist after moves

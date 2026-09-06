@@ -411,6 +411,25 @@ mod tests {
     }
 
     #[test]
+    fn a_grown_panel_stays_whole_on_its_own_monitor() {
+        // The panel sits near the right edge of the external monitor and the
+        // page then reports a wider, taller size (collapsed -> expanded).
+        // `panel_resized` picks the monitor from the pre-resize rect and clamps
+        // the new rect into it, so the panel must not spill onto the built-in.
+        let m = two_monitors();
+        let (before_w, before_h) = (76, 35);
+        let (after_w, after_h) = (220, 180);
+        let (x, y) = (2880 + 1920 - 84, 100); // 8 px from the external's right edge
+        let i = monitor_for_window(&m, x, y, before_w, before_h).expect("on the external");
+        assert_eq!(i, 1);
+        let (nx, ny) = clamp(x, y, after_w, after_h, &m[i].work_area);
+        let wa = &m[i].work_area;
+        assert!(nx >= wa.x && nx + after_w as i32 <= wa.max_x(), "x {nx} inside {}..{}", wa.x, wa.max_x());
+        assert!(ny >= wa.y && ny + after_h as i32 <= wa.max_y(), "y {ny} inside {}..{}", wa.y, wa.max_y());
+        assert_eq!(nx, wa.max_x() - after_w as i32, "pulled back onto the external monitor");
+    }
+
+    #[test]
     fn monitor_for_window_uses_centre_then_corner() {
         let m = two_monitors();
         assert_eq!(monitor_for_window(&m, 2800, 100, 200, 44), Some(1), "centre on the external");

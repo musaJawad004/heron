@@ -27,8 +27,7 @@
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "visible": false,
-        "focus": true,
-        "windowEffects": { "effects": ["popover"], "radius": 12 }
+        "focus": true
       },
       {
         "label": "panel",
@@ -46,8 +45,7 @@
         "focus": false,
         "focusable": false,
         "acceptFirstMouse": true,
-        "visibleOnAllWorkspaces": true,
-        "windowEffects": { "effects": ["popover"], "state": "active", "radius": 12 }
+        "visibleOnAllWorkspaces": true
       },
       {
         "label": "settings",
@@ -85,7 +83,9 @@
       "minimumSystemVersion": "12.0"
     },
     "windows": {
-      "nsis": { "installMode": "currentUser" }
+      "nsis": {
+        "installMode": "currentUser"
+      }
     }
   }
 }
