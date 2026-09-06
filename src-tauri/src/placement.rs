@@ -56,7 +56,12 @@ pub struct MonitorInfo {
     pub bounds: Rect,
     /// Bounds minus menu bar / taskbar / Dock.
     pub work_area: Rect,
+    /// Scale of the space the rectangles above are in. `windows` normalises
+    /// everything to points, so in production this is 1.0.
     pub scale: f64,
+    /// The display's real backing scale factor. Only used to interpret raw
+    /// platform rectangles (the tray icon), never by the placement math.
+    pub device_scale: f64,
     pub is_primary: bool,
     pub has_cursor: bool,
 }
@@ -87,6 +92,33 @@ pub fn clamp(x: i32, y: i32, width: u32, height: u32, area: &Rect) -> (i32, i32)
     let max_x = (area.max_x() - width as i32).max(area.x);
     let max_y = (area.max_y() - height as i32).max(area.y);
     (x.clamp(area.x, max_x), y.clamp(area.y, max_y))
+}
+
+/// Which display's menu bar a tray rectangle belongs to.
+///
+/// macOS draws a menu bar on every display and reports the icon's rectangle in
+/// that display's own pixels. Displays with different scale factors overlap in
+/// that raw space (a 2x 1512-point built-in covers 0..3024, a 1x external
+/// beside it covers 1512..3432), so the only way back is to try each display:
+/// the right one is where dividing by its own scale lands inside its own
+/// bounds. Menu-bar icons sit at the right end of the bar, so a secondary
+/// display's icon never fits the primary; when the raw numbers do fit more than
+/// one display the primary is the answer.
+pub fn tray_monitor(tray_x: f64, tray_y: f64, monitors: &[MonitorInfo]) -> Option<usize> {
+    let fits: Vec<usize> = monitors
+        .iter()
+        .enumerate()
+        .filter(|(_, m)| {
+            let s = if m.device_scale > 0.0 { m.device_scale } else { 1.0 };
+            m.bounds.contains((tray_x / s).round() as i32, (tray_y / s).round() as i32)
+        })
+        .map(|(i, _)| i)
+        .collect();
+    match fits.len() {
+        0 => monitors.iter().position(|m| m.is_primary).or(if monitors.is_empty() { None } else { Some(0) }),
+        1 => Some(fits[0]),
+        _ => fits.iter().copied().find(|&i| monitors[i].is_primary).or(Some(fits[0])),
+    }
 }
 
 /// The monitor placements default to: under the cursor, else the primary,
@@ -247,6 +279,7 @@ mod tests {
             bounds: Rect::new(x, y, w, h),
             work_area: Rect::new(x, y + top_inset as i32, w, h - top_inset),
             scale,
+            device_scale: scale,
             is_primary: false,
             has_cursor: false,
         }
@@ -415,10 +448,38 @@ mod tests {
     /// (0..3024 and 1512..3432), which used to drop the panel half on each
     /// screen; in points they tile cleanly.
     fn mixed_dpi() -> Vec<MonitorInfo> {
+        // Rectangles are points (what `windows::monitor_infos` produces);
+        // `device_scale` stays the display's real backing factor.
         let mut built_in = mon("Color LCD", 0, 0, 1512, 982, 37, 1.0); // 3024x1964 @2x
         built_in.is_primary = true;
-        let external = mon("2260W", 1512, 0, 1920, 1080, 25, 1.0); // 1920x1080 @1x
+        built_in.device_scale = 2.0;
+        let mut external = mon("2260W", 1512, 0, 1920, 1080, 25, 1.0); // 1920x1080 @1x
+        external.device_scale = 1.0;
         vec![built_in, external]
+    }
+
+    #[test]
+    fn tray_on_the_built_in_menu_bar_resolves_to_the_built_in() {
+        let m = mixed_dpi();
+        // Right end of the 2x built-in's menu bar: 1476 points -> 2952 pixels.
+        // Those raw numbers also fit the external's 1512..3432, so the tie has
+        // to break towards the primary.
+        assert_eq!(tray_monitor(2952.0, 12.0, &m), Some(0));
+    }
+
+    #[test]
+    fn tray_on_the_external_menu_bar_resolves_to_the_external() {
+        let m = mixed_dpi();
+        // Right end of the 1x external's bar: 3300 points and pixels alike.
+        // Halving it lands at 1650, outside the built-in, so there is no tie.
+        assert_eq!(tray_monitor(3300.0, 8.0, &m), Some(1));
+    }
+
+    #[test]
+    fn tray_off_every_display_falls_back_to_the_primary() {
+        let m = mixed_dpi();
+        assert_eq!(tray_monitor(99_000.0, 99_000.0, &m), Some(0));
+        assert_eq!(tray_monitor(0.0, 0.0, &[]), None);
     }
 
     #[test]

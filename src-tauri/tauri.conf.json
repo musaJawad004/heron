@@ -27,7 +27,16 @@
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "visible": false,
-        "focus": true
+        "focus": true,
+        "windowEffects": {
+          "effects": [
+            "popover",
+            "mica",
+            "blur"
+          ],
+          "radius": 12,
+          "state": "active"
+        }
       },
       {
         "label": "panel",
@@ -45,7 +54,16 @@
         "focus": false,
         "focusable": false,
         "acceptFirstMouse": true,
-        "visibleOnAllWorkspaces": true
+        "visibleOnAllWorkspaces": true,
+        "windowEffects": {
+          "effects": [
+            "popover",
+            "mica",
+            "blur"
+          ],
+          "radius": 12,
+          "state": "active"
+        }
       },
       {
         "label": "settings",

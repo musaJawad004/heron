@@ -200,6 +200,7 @@
     border: 0.5px solid var(--separator);
     border-radius: var(--radius-window);
     background: var(--surface-floating);
+    box-shadow: inset 0 0.5px 0 var(--glass-edge);
     overflow: hidden;
   }
   .scroll {

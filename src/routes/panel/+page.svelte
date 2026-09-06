@@ -149,12 +149,15 @@
     width: max-content;
     max-width: 220px;
     overflow: hidden;
+    /* The window is sized to this element and carries a native vibrancy
+       material at the same radius, so this only tints the glass. A CSS drop
+       shadow would be clipped at the window edge and read as a dark rim, so
+       the window's own shadow does that job. */
     border: 0.5px solid var(--separator);
     border-radius: var(--radius-window);
-    /* The window is sized to this element, so a CSS drop shadow would be
-       clipped at the edge and read as a dark rim; the window's own shadow
-       does the lifting instead. */
     background: var(--surface-floating);
+    /* Catches the light along the top edge like macOS glass. */
+    box-shadow: inset 0 0.5px 0 var(--glass-edge);
   }
   .capsule.expanded {
     width: 220px;

@@ -156,6 +156,7 @@ fn monitor_infos(app: &AppHandle) -> Vec<MonitorInfo> {
                 // Rectangles and window sizes are already in points, so the
                 // placement math needs no further scaling.
                 scale: 1.0,
+                device_scale: m.scale_factor(),
                 is_primary: primary.as_ref().map(same).unwrap_or(false),
                 has_cursor: under_cursor.as_ref().map(same).unwrap_or(false),
             }
@@ -279,22 +280,25 @@ pub fn popover_resized(app: &AppHandle, height: f64) {
 fn position_popover(app: &AppHandle, w: &WebviewWindow) {
     let Some((width, height)) = logical_size(w) else { return };
     let size = (width.round() as u32, height.round() as u32);
-    let tray = *TRAY_RECT.lock();
-    let target = match tray.and_then(|t| tray_monitor(app, &t).map(|m| (t, m))) {
-        Some((tray, m)) => {
-            let scale = if m.scale_factor() > 0.0 { m.scale_factor() } else { 1.0 };
+    let raw = *TRAY_RECT.lock();
+    let monitors = monitor_infos(app);
+    let on = raw.and_then(|t| placement::tray_monitor(t.x, t.y, &monitors).map(|i| (t, i)));
+    let target = match on {
+        Some((tray, i)) => {
+            let m = &monitors[i];
+            let scale = if m.device_scale > 0.0 { m.device_scale } else { 1.0 };
             let tray = Rect::new(
                 (tray.x / scale).round() as i32,
                 (tray.y / scale).round() as i32,
                 (tray.width / scale).round() as u32,
                 (tray.height / scale).round() as u32,
             );
-            Some(placement::popover_position(&tray, size, &work_area_of(&m), gap_px(&m)))
+            Some(placement::popover_position(&tray, size, &m.work_area, POPOVER_GAP_PTS))
         }
         // No tray rect yet (Linux app indicators never report one, and the
         // single-instance hook can arrive before any click): top-right corner.
         None => primary_monitor(app).map(|m| {
-            let gap = gap_px(&m);
+            let gap = POPOVER_GAP_PTS;
             let area = work_area_of(&m).inset(gap.0, gap.1);
             placement::clamp(area.max_x() - size.0 as i32, area.y, size.0, size.1, &area)
         }),
@@ -304,28 +308,8 @@ fn position_popover(app: &AppHandle, w: &WebviewWindow) {
     }
 }
 
-/// Which screen's menu bar the tray icon was clicked on.
-///
-/// macOS shows a menu bar on every display, and the rectangle the tray hands us
-/// is in that display's own pixels. Converting it with the wrong scale is what
-/// used to throw the popover onto the primary screen, so take the screen under
-/// the cursor: clicking the icon puts the pointer on it. Fall back to reading
-/// the rectangle as primary-screen pixels.
-fn tray_monitor(app: &AppHandle, tray: &PhysicalRect) -> Option<Monitor> {
-    app.cursor_position()
-        .ok()
-        .and_then(|c| app.monitor_from_point(c.x, c.y).ok().flatten())
-        .or_else(|| {
-            let (cx, cy) = (tray.x + tray.width / 2.0, tray.y + tray.height / 2.0);
-            app.monitor_from_point(cx, cy).ok().flatten()
-        })
-        .or_else(|| primary_monitor(app))
-}
-
-/// Popover gap in points (the whole module works in points).
-fn gap_px(_m: &Monitor) -> (i32, i32) {
-    (POPOVER_GAP.0.round() as i32, POPOVER_GAP.1.round() as i32)
-}
+/// Popover gap from the work-area edge, in points.
+const POPOVER_GAP_PTS: (i32, i32) = (POPOVER_GAP.0 as i32, POPOVER_GAP.1 as i32);
 
 // ---- settings ---------------------------------------------------------------
 
