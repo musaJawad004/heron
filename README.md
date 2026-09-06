@@ -22,6 +22,10 @@
 </p>
 
 <p align="center">
+  <img src="docs/media/demo.gif" width="380" alt="Heron's menu bar popover showing three running Claude Code sessions, with the Focus button appearing on hover">
+</p>
+
+<p align="center">
   <img src="docs/media/popover.png" width="340" alt="Heron menu bar popover listing running and recent Claude Code CLI sessions with live status">
 </p>
 
