@@ -43,6 +43,33 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Heron ${{ github.ref_name }}
-          releaseBody: Unsigned builds. macOS — right-click → Open on first launch.
+          releaseBody: |
+            ### Install
+
+            | Platform | File | Note |
+            |---|---|---|
+            | macOS (Apple silicon) | `*_aarch64.dmg` | Right-click the app, then **Open**, the first time |
+            | macOS (Intel) | `*_x64.dmg` | Same |
+            | Windows | `*-setup.exe` or `*.msi` | **More info**, then **Run anyway**, at the SmartScreen prompt |
+            | Linux | `*.AppImage` or `*.deb` | `chmod +x` the AppImage |
+
+            Builds are **unsigned**: no developer account, no notarization, nothing uploaded.
+            That is also why both systems warn on first launch. You can always build it
+            yourself with `yarn install && yarn tauri build`.
+
+            After launching, click the heron in the menu bar, then **Settings → Hooks →
+            Install hooks** to turn on notifications. That is the only step that touches
+            `~/.claude/settings.json`, it takes a backup first, and Uninstall removes
+            exactly what it added.
+
+            ### What it does
+
+            Watches the Claude Code sessions running on your machine: how many, which one
+            is working, which is waiting on a permission prompt. Start a session in any
+            folder, resume a past one, or click a notification to jump to its terminal.
+
+            **There is no network code in this repository.** Not for telemetry, not for
+            updates. A scanner runs on every push and fails the build if anyone adds an
+            HTTP client.
           releaseDraft: true
           args: ${{ matrix.args }}
