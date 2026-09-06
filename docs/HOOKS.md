@@ -14,7 +14,7 @@ works on macOS, Linux and Windows.
     "Notification": [
       { "matcher": "permission_prompt|idle_prompt|elicitation_dialog|elicitation_url_dialog|agent_needs_input|agent_completed",
         "hooks": [ { "type": "command",
-                     "command": "/Users/me/Library/Application Support/com.glixentech.heron/bin/heron-hook",
+                     "command": "/Users/me/Library/Application Support/com.muhammadmusadev.heron/bin/heron-hook",
                      "args": [], "async": true, "timeout": 5 } ] }
     ],
     "Stop":              [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "args": [], "async": true, "timeout": 5 } ] } ],
@@ -27,7 +27,7 @@ works on macOS, Linux and Windows.
 ```
 
 Windows: `"command": "powershell.exe", "args": ["-NoProfile", "-NonInteractive",
-"-ExecutionPolicy", "Bypass", "-File", "C:\\Users\\me\\AppData\\Roaming\\com.glixentech.heron\\bin\\heron-hook.ps1"]`.
+"-ExecutionPolicy", "Bypass", "-File", "C:\\Users\\me\\AppData\\Roaming\\com.muhammadmusadev.heron\\bin\\heron-hook.ps1"]`.
 
 * `matcher` omitted or `"*"` = all. Letters/digits/`_`/`-`/`|` = exact list;
   anything else = regex.

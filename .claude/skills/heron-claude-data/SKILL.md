@@ -35,5 +35,5 @@ Debug helpers
 ls -la ~/.claude/sessions/ ; python3 -m json.tool ~/.claude/sessions/*.json
 ps -o pid=,tty=,command= -p <pid>
 tail -3 ~/.claude/history.jsonl
-ls "$HOME/Library/Application Support/com.glixentech.heron/events"   # macOS
+ls "$HOME/Library/Application Support/com.muhammadmusadev.heron/events"   # macOS
 ```

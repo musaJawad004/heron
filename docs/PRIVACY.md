@@ -19,8 +19,8 @@ past its head. (`~/.claude` is `%USERPROFILE%\.claude` on Windows.)
 
 ## What Heron writes
 
-App-data dir: `~/Library/Application Support/com.glixentech.heron` (macOS),
-`%APPDATA%\com.glixentech.heron` (Windows), `~/.local/share/com.glixentech.heron` (Linux).
+App-data dir: `~/Library/Application Support/com.muhammadmusadev.heron` (macOS),
+`%APPDATA%\com.muhammadmusadev.heron` (Windows), `~/.local/share/com.muhammadmusadev.heron` (Linux).
 
 | Path | What |
 |---|---|
@@ -56,5 +56,5 @@ allows only the app's own files.
 ```bash
 grep -rnE "reqwest|hyper|std::net|TcpStream|WebSocket" src-tauri/src   # → no results
 grep -rnE "fetch\(|XMLHttpRequest|WebSocket" src                        # → no results
-cat "$HOME/Library/Application Support/com.glixentech.heron/bin/heron-hook"   # read the hook
+cat "$HOME/Library/Application Support/com.muhammadmusadev.heron/bin/heron-hook"   # read the hook
 ```

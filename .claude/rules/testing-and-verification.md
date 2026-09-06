@@ -9,8 +9,8 @@
 - Real verification: `npm run tauri dev`, then in a terminal run `claude` in
   some folder → it shows in the popover within 2 s; quit it → gone within 2 s.
 - Hook smoke test after "Install hooks": on macOS
-  `echo '{"hook_event_name":"Stop","session_id":"test","cwd":"/tmp"}' | "$HOME/Library/Application Support/com.glixentech.heron/bin/heron-hook"`
+  `echo '{"hook_event_name":"Stop","session_id":"test","cwd":"/tmp"}' | "$HOME/Library/Application Support/com.muhammadmusadev.heron/bin/heron-hook"`
   → the event appears in Settings → Hooks. Windows: pipe the same JSON into
-  `powershell -File %APPDATA%\com.glixentech.heron\bin\heron-hook.ps1`.
+  `powershell -File %APPDATA%\com.muhammadmusadev.heron\bin\heron-hook.ps1`.
 - Never test against real `~/.claude` data in unit tests; never delete
   anything under `~/.claude`.

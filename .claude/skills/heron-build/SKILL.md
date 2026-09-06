@@ -15,8 +15,8 @@ local use; release bundles are unsigned unless you add your own keys.
 | Frontend type-check | `npm run check` |
 | Format | `cd src-tauri && cargo fmt` · `npx prettier -w src` |
 | Release bundle for this OS | `npm run tauri build` → `src-tauri/target/release/bundle/` |
-| macOS logs | `log stream --predicate 'process == "heron"' --style compact` or the log file under `~/Library/Logs/com.glixentech.heron/` |
-| Windows/Linux logs | `%APPDATA%\com.glixentech.heron\logs\` / `~/.local/share/com.glixentech.heron/logs/` |
+| macOS logs | `log stream --predicate 'process == "heron"' --style compact` or the log file under `~/Library/Logs/com.muhammadmusadev.heron/` |
+| Windows/Linux logs | `%APPDATA%\com.muhammadmusadev.heron\logs\` / `~/.local/share/com.muhammadmusadev.heron/logs/` |
 
 Gotchas
 - The tray is the app: there is no main window. Quit via the tray menu or

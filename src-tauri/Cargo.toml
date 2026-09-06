@@ -2,7 +2,7 @@
 name = "heron"
 version = "0.1.0"
 description = "Watches your Claude Code sessions from the menu bar / tray. Local only."
-authors = ["Glixen Technologies <contact@glixentech.com>"]
+authors = ["Muhammad Musa <musaJawad004@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/musaJawad004/heron"
 edition = "2021"

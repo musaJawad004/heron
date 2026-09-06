@@ -5,8 +5,8 @@
   import External from '../icons/External.svelte';
   import HeronMark from '../icons/HeronMark.svelte';
 
-  const GITHUB = 'https://github.com/glixentech/heron';
-  const PRIVACY = 'https://github.com/glixentech/heron/blob/main/docs/PRIVACY.md';
+  const GITHUB = 'https://github.com/muhammadmusadev/heron';
+  const PRIVACY = 'https://github.com/muhammadmusadev/heron/blob/main/docs/PRIVACY.md';
 </script>
 
 <div class="about">

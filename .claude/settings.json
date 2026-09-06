@@ -27,7 +27,7 @@
       "Read(~/.claude/projects/**/*.jsonl)",
       "Read(~/.claude/history.jsonl)",
       "Read(~/.claude/settings.json)",
-      "Read(~/Library/Application Support/com.glixentech.heron/**)"
+      "Read(~/Library/Application Support/com.muhammadmusadev.heron/**)"
     ],
     "deny": [
       "Read(~/.claude/sessions/*.key)",

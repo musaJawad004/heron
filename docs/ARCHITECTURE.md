@@ -42,8 +42,8 @@ through `commands.rs`.
 | executable | `~/.local/bin/claude` (also Homebrew, npm global) | `%USERPROFILE%\.local\bin\claude.exe` (also npm global) |
 
 Heron's own files live in the Tauri app-data dir: macOS
-`~/Library/Application Support/com.glixentech.heron`, Windows
-`%APPDATA%\com.glixentech.heron`, Linux `~/.local/share/com.glixentech.heron`:
+`~/Library/Application Support/com.muhammadmusadev.heron`, Windows
+`%APPDATA%\com.muhammadmusadev.heron`, Linux `~/.local/share/com.muhammadmusadev.heron`:
 `settings.json`, `events/` (hook spool), `bin/heron-hook[.ps1]`, `cache/`,
 `launch/`.
 

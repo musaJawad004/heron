@@ -1,12 +1,13 @@
 <p align="center">
-  <img src="src-tauri/icons/128x128@2x.png" width="112" alt="Heron">
+  <img src="src-tauri/icons/128x128@2x.png" width="112" alt="Heron app icon">
 </p>
 
-<h1 align="center">Heron</h1>
+<h1 align="center">Heron — Claude Code session manager for your menu bar</h1>
 
 <p align="center">
   A quiet menu bar app that watches your <b>Claude Code</b> sessions.<br>
-  How many are running, which one needs you, and one click to start or resume one.
+  See how many are running, which one needs you, and start or resume one in a click.<br>
+  <b>Local only. No network code, no telemetry, no account.</b>
 </p>
 
 <p align="center">
@@ -21,10 +22,16 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/popover.png" width="340" alt="The Heron popover listing running and recent Claude Code sessions">
+  <img src="docs/media/popover.png" width="340" alt="Heron menu bar popover listing running and recent Claude Code CLI sessions with live status">
 </p>
 
 ---
+
+Heron is an open-source **Claude Code CLI manager**: a macOS menu bar app (and a
+Windows and Linux system tray app) that monitors every `claude` session running on
+your machine, shows which one is working, idle or waiting for permission, and sends
+a native notification the moment Claude needs you. It is a Claude Code session
+monitor, launcher and notifier in about 4 MB, and it never talks to the network.
 
 ## Why
 
@@ -45,7 +52,7 @@ Heron answers that from the menu bar, without you going looking.
 - **Notifications that mean something.** When Claude asks for permission or finishes a turn, you get a native banner. Click it to jump straight to that terminal.
 
 <p align="center">
-  <img src="docs/media/panel-collapsed.png" width="76" alt="The floating panel, collapsed">
+  <img src="docs/media/panel-collapsed.png" width="76" alt="Heron floating panel showing the live Claude Code session count">
 </p>
 
 ## Privacy
@@ -131,6 +138,30 @@ If you use Claude Code on this repo, it ships a full `.claude/` setup: rules,
 hooks that format on edit and refuse to end a turn on a broken build, four
 agents, a review workflow, and imported Rust, Tauri and Svelte skills. See
 [CLAUDE.md](CLAUDE.md).
+
+## Questions people ask
+
+**Does it work with Claude Code on Windows?** Yes. Heron reads
+`%USERPROFILE%\.claude` and registers its hooks through PowerShell. The tray icon
+carries the session count there too.
+
+**Does it send my prompts anywhere?** No. There is no network code in the
+repository at all, and the only prompt-derived text it stores is a session title
+truncated to 80 characters. See [Privacy](#privacy).
+
+**Does it need an API key or a Claude account?** No. Heron never talks to
+Anthropic. It reads the files the Claude Code CLI already writes on your disk.
+
+**Will it slow Claude Code down?** No. The hook it installs writes one small file
+and exits; it is registered as asynchronous with a five second timeout, and it can
+never block or alter a session.
+
+**How do I get notified when Claude asks for permission?** Settings → Hooks →
+Install hooks. That adds six entries to `~/.claude/settings.json`, after taking a
+backup, and Uninstall removes exactly those.
+
+**Can I use it with several sessions at once?** That is the point. The menu bar
+count and the floating panel are both built for running many sessions in parallel.
 
 ## Contributing
 
