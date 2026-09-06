@@ -501,6 +501,20 @@ mod tests {
     }
 
     #[test]
+    fn popover_opens_on_the_screen_whose_menu_bar_was_clicked() {
+        // Tray icon near the right of the external monitor's own menu bar,
+        // already converted to points with that monitor's scale.
+        let m = mixed_dpi();
+        let external = &m[1];
+        let tray = Rect::new(3300, 0, 24, 25);
+        let (x, y) = popover_position(&tray, (340, 447), &external.work_area, (8, 4));
+        let wa = &external.work_area;
+        assert!(x >= wa.x, "x {x} is not back on the built-in");
+        assert!(x + 340 <= wa.max_x(), "x {x} stays inside the external");
+        assert!(y >= wa.y && y + 447 <= wa.max_y(), "y {y} inside the external");
+    }
+
+    #[test]
     fn popover_never_overflows_the_right_edge() {
         let work_area = Rect::new(0, 25, 1920, 1055);
         let tray = Rect::new(1880, 0, 30, 25); // icon near the corner

@@ -68,9 +68,17 @@ static PANEL_MOVED_AT: AtomicU64 = AtomicU64::new(0);
 static PANEL_MOVE_PENDING: AtomicBool = AtomicBool::new(false);
 static PANEL_THREAD_STARTED: AtomicBool = AtomicBool::new(false);
 /// Tray icon rect (physical px) from the last tray event.
-static TRAY_RECT: Mutex<Option<Rect>> = Mutex::new(None);
-/// Scale of the monitor the tray icon sits on, learned on the first placement.
-static TRAY_SCALE: Mutex<Option<f64>> = Mutex::new(None);
+/// The tray icon's rectangle as the platform reports it: device pixels of the
+/// screen whose menu bar holds the icon.
+#[derive(Clone, Copy, Debug)]
+struct PhysicalRect {
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+}
+
+static TRAY_RECT: Mutex<Option<PhysicalRect>> = Mutex::new(None);
 
 fn window(app: &AppHandle, label: &str) -> Option<WebviewWindow> {
     app.get_webview_window(label)
@@ -159,14 +167,13 @@ fn monitor_infos(app: &AppHandle) -> Vec<MonitorInfo> {
 
 /// Remember where the tray icon is (called from every tray event).
 pub fn note_tray_rect(rect: &tauri::Rect) {
-    // Stored in points, like every other rectangle here. The tray lives on the
-    // menu-bar monitor, so that monitor's scale is the right divisor.
-    let scale = TRAY_SCALE.lock().unwrap_or(1.0);
-    let p = rect.position.to_logical::<f64>(scale);
-    let s = rect.size.to_logical::<f64>(scale);
-    let r =
-        Rect::new(p.x.round() as i32, p.y.round() as i32, s.width.round() as u32, s.height.round() as u32);
-    *TRAY_RECT.lock() = Some(r);
+    // Kept in the device pixels the platform reports, because the scale that
+    // converts them belongs to whichever screen's menu bar was clicked, and
+    // that is only known once we can look at the cursor (see `tray_monitor`).
+    let p = rect.position.to_physical::<f64>(1.0);
+    let s = rect.size.to_physical::<f64>(1.0);
+    *TRAY_RECT.lock() =
+        Some(PhysicalRect { x: p.x, y: p.y, width: s.width.max(1.0), height: s.height.max(1.0) });
 }
 
 pub fn toggle_popover(app: &AppHandle) {
@@ -272,17 +279,17 @@ pub fn popover_resized(app: &AppHandle, height: f64) {
 fn position_popover(app: &AppHandle, w: &WebviewWindow) {
     let Some((width, height)) = logical_size(w) else { return };
     let size = (width.round() as u32, height.round() as u32);
-    // Remember the menu-bar monitor's scale so the next tray rect converts.
-    if let Some(m) = primary_monitor(app) {
-        *TRAY_SCALE.lock() = Some(m.scale_factor());
-    }
     let tray = *TRAY_RECT.lock();
-    let target = match tray {
-        Some(tray) => {
-            let (cx, cy) =
-                (tray.x as f64 + tray.width as f64 / 2.0, tray.y as f64 + tray.height as f64 / 2.0);
-            let monitor = app.monitor_from_point(cx, cy).ok().flatten().or_else(|| primary_monitor(app));
-            monitor.map(|m| placement::popover_position(&tray, size, &work_area_of(&m), gap_px(&m)))
+    let target = match tray.and_then(|t| tray_monitor(app, &t).map(|m| (t, m))) {
+        Some((tray, m)) => {
+            let scale = if m.scale_factor() > 0.0 { m.scale_factor() } else { 1.0 };
+            let tray = Rect::new(
+                (tray.x / scale).round() as i32,
+                (tray.y / scale).round() as i32,
+                (tray.width / scale).round() as u32,
+                (tray.height / scale).round() as u32,
+            );
+            Some(placement::popover_position(&tray, size, &work_area_of(&m), gap_px(&m)))
         }
         // No tray rect yet (Linux app indicators never report one, and the
         // single-instance hook can arrive before any click): top-right corner.
@@ -295,6 +302,24 @@ fn position_popover(app: &AppHandle, w: &WebviewWindow) {
     if let Some((x, y)) = target {
         move_to(w, x, y);
     }
+}
+
+/// Which screen's menu bar the tray icon was clicked on.
+///
+/// macOS shows a menu bar on every display, and the rectangle the tray hands us
+/// is in that display's own pixels. Converting it with the wrong scale is what
+/// used to throw the popover onto the primary screen, so take the screen under
+/// the cursor: clicking the icon puts the pointer on it. Fall back to reading
+/// the rectangle as primary-screen pixels.
+fn tray_monitor(app: &AppHandle, tray: &PhysicalRect) -> Option<Monitor> {
+    app.cursor_position()
+        .ok()
+        .and_then(|c| app.monitor_from_point(c.x, c.y).ok().flatten())
+        .or_else(|| {
+            let (cx, cy) = (tray.x + tray.width / 2.0, tray.y + tray.height / 2.0);
+            app.monitor_from_point(cx, cy).ok().flatten()
+        })
+        .or_else(|| primary_monitor(app))
 }
 
 /// Popover gap in points (the whole module works in points).
