@@ -86,12 +86,16 @@ fn compose(event: &HookEvent, session: Option<&Session>) -> Option<Text> {
             (_, Some("permission_prompt")) => {
                 event.message.clone().unwrap_or_else(|| "Claude is waiting for permission".to_string())
             }
-            (_, Some("idle_prompt")) => {
-                event.message.clone().unwrap_or_else(|| "Claude is waiting for your input".to_string())
-            }
             _ => "Claude is waiting for your input".to_string(),
         };
         return Some(Text { title: format!("{project} needs you"), body });
+    }
+    if event.is_idle_prompt() {
+        return Some(Text {
+            title: format!("{project} is waiting"),
+            // The CLI's own one-line system message; never user or tool text.
+            body: event.message.clone().unwrap_or_else(|| "Claude is waiting for your input".to_string()),
+        });
     }
     if event.is_completion() {
         return Some(Text {

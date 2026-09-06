@@ -237,11 +237,10 @@ impl AppState {
         self.publish(app);
 
         let wants = if event.requires_attention() {
-            if event.subtype.as_deref() == Some("idle_prompt") {
-                settings.notify_on_idle
-            } else {
-                settings.notify_on_permission
-            }
+            settings.notify_on_permission
+        } else if event.is_idle_prompt() {
+            // Not an attention state, but the user can ask to hear about it.
+            settings.notify_on_idle
         } else if event.is_completion() {
             settings.notify_on_done
         } else {

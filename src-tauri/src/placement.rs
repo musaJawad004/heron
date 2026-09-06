@@ -410,6 +410,50 @@ mod tests {
         assert_eq!(clamp(350, 200, 100, 100, &area), (300, 150));
     }
 
+    /// A 2x built-in beside a 1x external, normalised to points the way
+    /// `windows::monitor_infos` does. In raw device pixels these two overlap
+    /// (0..3024 and 1512..3432), which used to drop the panel half on each
+    /// screen; in points they tile cleanly.
+    fn mixed_dpi() -> Vec<MonitorInfo> {
+        let mut built_in = mon("Color LCD", 0, 0, 1512, 982, 37, 1.0); // 3024x1964 @2x
+        built_in.is_primary = true;
+        let external = mon("2260W", 1512, 0, 1920, 1080, 25, 1.0); // 1920x1080 @1x
+        vec![built_in, external]
+    }
+
+    #[test]
+    fn mixed_dpi_monitors_do_not_overlap_in_points() {
+        let m = mixed_dpi();
+        assert_eq!(m[0].work_area.max_x(), m[1].work_area.x, "they tile, edge to edge");
+        assert!(!m[0].bounds.contains(m[1].bounds.x, m[1].bounds.y), "no overlap");
+    }
+
+    #[test]
+    fn panel_pinned_on_the_external_stays_on_the_external() {
+        let m = mixed_dpi();
+        for edge in [PanelEdge::Left, PanelEdge::Right] {
+            let p = pinned(edge, SIZE, &m[1]);
+            let wa = &m[1].work_area;
+            assert!(p.x >= wa.x, "{edge:?}: x {} >= {}", p.x, wa.x);
+            assert!(p.x + SIZE.0 as i32 <= wa.max_x(), "{edge:?}: right edge inside the external");
+            assert_eq!(p.monitor.as_deref(), Some("2260W"));
+        }
+    }
+
+    #[test]
+    fn following_the_cursor_to_the_external_lands_fully_on_it() {
+        let mut m = mixed_dpi();
+        m[0].has_cursor = false;
+        m[1].has_cursor = true;
+        // Saved on the built-in, 8 px in from its left edge.
+        let saved = origin(8, 45, "Color LCD");
+        let p = placement(Some(&saved), PanelEdge::Left, SIZE, &m, true).expect("a placement");
+        let wa = &m[1].work_area;
+        assert_eq!(p.monitor.as_deref(), Some("2260W"), "moved to the cursor's screen");
+        assert!(p.x >= wa.x && p.x + SIZE.0 as i32 <= wa.max_x(), "x {} inside the external", p.x);
+        assert!(p.y >= wa.y && p.y + SIZE.1 as i32 <= wa.max_y(), "y {} inside the external", p.y);
+    }
+
     #[test]
     fn a_grown_panel_stays_whole_on_its_own_monitor() {
         // The panel sits near the right edge of the external monitor and the

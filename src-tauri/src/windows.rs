@@ -17,6 +17,13 @@
 //!   to the Regular activation policy while it is open so it can come to the
 //!   front, and back to Accessory when it closes.
 //!
+//! Everything here works in **logical points**. macOS lays the desktop out
+//! in points but reports each monitor's origin in that monitor's own pixels,
+//! so on a mixed-DPI setup (a 2x built-in beside a 1x external) the physical
+//! rectangles overlap and a window placed by physical coordinates lands on
+//! the wrong screen, or half on each. `monitor_infos` divides every monitor
+//! by its own scale to restore one non-overlapping space.
+//!
 //! All math lives in `placement` (pure, unit-tested); this file only reads
 //! window/monitor state and applies results. Nothing here holds a lock while
 //! calling into Tauri.
@@ -29,7 +36,7 @@ use parking_lot::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
 use std::time::Duration;
-use tauri::{AppHandle, LogicalSize, Manager, Monitor, PhysicalPosition, Position, Size, WebviewWindow};
+use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, Monitor, Position, Size, WebviewWindow};
 
 pub const POPOVER: &str = "popover";
 pub const PANEL: &str = "panel";
@@ -62,6 +69,8 @@ static PANEL_MOVE_PENDING: AtomicBool = AtomicBool::new(false);
 static PANEL_THREAD_STARTED: AtomicBool = AtomicBool::new(false);
 /// Tray icon rect (physical px) from the last tray event.
 static TRAY_RECT: Mutex<Option<Rect>> = Mutex::new(None);
+/// Scale of the monitor the tray icon sits on, learned on the first placement.
+static TRAY_SCALE: Mutex<Option<f64>> = Mutex::new(None);
 
 fn window(app: &AppHandle, label: &str) -> Option<WebviewWindow> {
     app.get_webview_window(label)
@@ -75,11 +84,12 @@ fn since(at: &AtomicU64) -> u64 {
     now_ms().saturating_sub(at.load(Ordering::Relaxed))
 }
 
+/// Move a window, in **logical points** (see `monitor_infos`).
 fn move_to(w: &WebviewWindow, x: i32, y: i32) {
-    if w.outer_position().map(|p| (p.x, p.y) == (x, y)).unwrap_or(false) {
+    if logical_position(w).map(|p| p == (x, y)).unwrap_or(false) {
         return;
     }
-    let _ = w.set_position(Position::Physical(PhysicalPosition::new(x, y)));
+    let _ = w.set_position(Position::Logical(LogicalPosition::new(x as f64, y as f64)));
 }
 
 fn logical_size(w: &WebviewWindow) -> Option<(f64, f64)> {
@@ -88,9 +98,31 @@ fn logical_size(w: &WebviewWindow) -> Option<(f64, f64)> {
     Some((s.width, s.height))
 }
 
+/// A window's top-left in logical points.
+fn logical_position(w: &WebviewWindow) -> Option<(i32, i32)> {
+    let scale = w.scale_factor().ok()?;
+    let p = w.outer_position().ok()?.to_logical::<f64>(scale);
+    Some((p.x.round() as i32, p.y.round() as i32))
+}
+
+/// Divide a monitor rectangle by that monitor's own scale, giving points.
+fn to_points(x: i32, y: i32, width: u32, height: u32, scale: f64) -> Rect {
+    let s = if scale > 0.0 { scale } else { 1.0 };
+    Rect::new(
+        (x as f64 / s).round() as i32,
+        (y as f64 / s).round() as i32,
+        (width as f64 / s).round() as u32,
+        (height as f64 / s).round() as u32,
+    )
+}
+
 fn work_area_of(m: &Monitor) -> Rect {
     let wa = m.work_area();
-    Rect::new(wa.position.x, wa.position.y, wa.size.width, wa.size.height)
+    to_points(wa.position.x, wa.position.y, wa.size.width, wa.size.height, m.scale_factor())
+}
+
+fn bounds_of(m: &Monitor) -> Rect {
+    to_points(m.position().x, m.position().y, m.size().width, m.size().height, m.scale_factor())
 }
 
 fn primary_monitor(app: &AppHandle) -> Option<Monitor> {
@@ -99,26 +131,25 @@ fn primary_monitor(app: &AppHandle) -> Option<Monitor> {
 
 /// Snapshot of every monitor for the placement math.
 fn monitor_infos(app: &AppHandle) -> Vec<MonitorInfo> {
-    let cursor = app.cursor_position().ok();
     let primary = primary_monitor(app);
+    // Ask the platform which monitor holds the cursor rather than testing our
+    // own rectangles: the cursor arrives in a different space again.
+    let under_cursor =
+        app.cursor_position().ok().and_then(|c| app.monitor_from_point(c.x, c.y).ok().flatten());
     app.available_monitors()
         .unwrap_or_default()
         .into_iter()
         .map(|m| {
-            let bounds = Rect::new(m.position().x, m.position().y, m.size().width, m.size().height);
-            let is_primary = primary
-                .as_ref()
-                .map(|p| p.position() == m.position() && p.size() == m.size())
-                .unwrap_or(false);
-            let has_cursor =
-                cursor.map(|c| bounds.contains(c.x.floor() as i32, c.y.floor() as i32)).unwrap_or(false);
+            let same = |o: &Monitor| o.position() == m.position() && o.size() == m.size();
             MonitorInfo {
                 name: m.name().cloned(),
-                bounds,
+                bounds: bounds_of(&m),
                 work_area: work_area_of(&m),
-                scale: m.scale_factor(),
-                is_primary,
-                has_cursor,
+                // Rectangles and window sizes are already in points, so the
+                // placement math needs no further scaling.
+                scale: 1.0,
+                is_primary: primary.as_ref().map(same).unwrap_or(false),
+                has_cursor: under_cursor.as_ref().map(same).unwrap_or(false),
             }
         })
         .collect()
@@ -128,8 +159,11 @@ fn monitor_infos(app: &AppHandle) -> Vec<MonitorInfo> {
 
 /// Remember where the tray icon is (called from every tray event).
 pub fn note_tray_rect(rect: &tauri::Rect) {
-    let p = rect.position.to_physical::<f64>(1.0);
-    let s = rect.size.to_physical::<f64>(1.0);
+    // Stored in points, like every other rectangle here. The tray lives on the
+    // menu-bar monitor, so that monitor's scale is the right divisor.
+    let scale = TRAY_SCALE.lock().unwrap_or(1.0);
+    let p = rect.position.to_logical::<f64>(scale);
+    let s = rect.size.to_logical::<f64>(scale);
     let r =
         Rect::new(p.x.round() as i32, p.y.round() as i32, s.width.round() as u32, s.height.round() as u32);
     *TRAY_RECT.lock() = Some(r);
@@ -236,33 +270,36 @@ pub fn popover_resized(app: &AppHandle, height: f64) {
 /// position is computed up front from the captured tray rect rather than read
 /// back after a move, because moves and resizes are asynchronous on macOS.
 fn position_popover(app: &AppHandle, w: &WebviewWindow) {
-    let Ok(size) = w.outer_size() else { return };
+    let Some((width, height)) = logical_size(w) else { return };
+    let size = (width.round() as u32, height.round() as u32);
+    // Remember the menu-bar monitor's scale so the next tray rect converts.
+    if let Some(m) = primary_monitor(app) {
+        *TRAY_SCALE.lock() = Some(m.scale_factor());
+    }
     let tray = *TRAY_RECT.lock();
     let target = match tray {
         Some(tray) => {
             let (cx, cy) =
                 (tray.x as f64 + tray.width as f64 / 2.0, tray.y as f64 + tray.height as f64 / 2.0);
             let monitor = app.monitor_from_point(cx, cy).ok().flatten().or_else(|| primary_monitor(app));
-            monitor.map(|m| {
-                placement::popover_position(&tray, (size.width, size.height), &work_area_of(&m), gap_px(&m))
-            })
+            monitor.map(|m| placement::popover_position(&tray, size, &work_area_of(&m), gap_px(&m)))
         }
         // No tray rect yet (Linux app indicators never report one, and the
         // single-instance hook can arrive before any click): top-right corner.
         None => primary_monitor(app).map(|m| {
             let gap = gap_px(&m);
             let area = work_area_of(&m).inset(gap.0, gap.1);
-            placement::clamp(area.max_x() - size.width as i32, area.y, size.width, size.height, &area)
+            placement::clamp(area.max_x() - size.0 as i32, area.y, size.0, size.1, &area)
         }),
     };
     if let Some((x, y)) = target {
-        let _ = w.set_position(Position::Physical(PhysicalPosition::new(x, y)));
+        move_to(w, x, y);
     }
 }
 
-fn gap_px(m: &Monitor) -> (i32, i32) {
-    let s = m.scale_factor();
-    ((POPOVER_GAP.0 * s).round() as i32, (POPOVER_GAP.1 * s).round() as i32)
+/// Popover gap in points (the whole module works in points).
+fn gap_px(_m: &Monitor) -> (i32, i32) {
+    (POPOVER_GAP.0.round() as i32, POPOVER_GAP.1.round() as i32)
 }
 
 // ---- settings ---------------------------------------------------------------
@@ -346,17 +383,17 @@ pub fn panel_moved(app: &AppHandle) {
     if !w.is_visible().unwrap_or(false) {
         return;
     }
-    let (Ok(pos), Ok(phys)) = (w.outer_position(), w.outer_size()) else { return };
-    let Some(size) = logical_size(&w) else { return };
+    let (Some((px, py)), Some(size)) = (logical_position(&w), logical_size(&w)) else { return };
     let monitors = monitor_infos(app);
-    let Some(i) = placement::monitor_for_window(&monitors, pos.x, pos.y, phys.width, phys.height)
-        .or_else(|| placement::active_monitor(&monitors))
+    let Some(i) =
+        placement::monitor_for_window(&monitors, px, py, size.0.round() as u32, size.1.round() as u32)
+            .or_else(|| placement::active_monitor(&monitors))
     else {
         return;
     };
     let state = app.state::<AppState>();
     let settings = state.settings();
-    let s = placement::snap(pos.x, pos.y, size, &monitors[i], settings.panel_edge);
+    let s = placement::snap(px, py, size, &monitors[i], settings.panel_edge);
     move_to(&w, s.x, s.y);
     let origin = PanelOrigin { x: s.x, y: s.y, monitor: monitors[i].name.clone() };
     if settings.panel_origin.as_ref() == Some(&origin) && settings.panel_edge == s.edge {
@@ -376,28 +413,28 @@ pub fn panel_resized(app: &AppHandle, width: f64, height: f64) {
     }
     let width = width.clamp(PANEL_MIN.0, PANEL_MAX.0);
     let height = height.clamp(PANEL_MIN.1, PANEL_MAX.1);
-    let (Ok(pos), Ok(old), Ok(scale)) = (w.outer_position(), w.outer_size(), w.scale_factor()) else {
+    let (Some((px, py)), Some((old_w, old_h))) = (logical_position(&w), logical_size(&w)) else {
         return;
     };
-    let new_width = (width * scale).round() as i32;
-    let new_height = (height * scale).round() as i32;
+    let (new_w, new_h) = (width.round() as i32, height.round() as i32);
     let edge = app.state::<AppState>().settings().panel_edge;
     let _ = w.set_size(Size::Logical(LogicalSize::new(width, height)));
     // macOS keeps the bottom-left corner on resize, so the top-left is
     // re-applied on every OS; a right-anchored panel also shifts by the delta.
     let x = match edge {
-        PanelEdge::Left => pos.x,
-        PanelEdge::Right => pos.x + old.width as i32 - new_width,
+        PanelEdge::Left => px,
+        PanelEdge::Right => px + old_w.round() as i32 - new_w,
     };
     // Growing the panel must not push it onto the neighbouring screen: keep it
     // whole on the monitor it was already on (chosen from the pre-resize rect,
     // so an expansion cannot hand it to the screen it is spilling towards).
     let monitors = monitor_infos(app);
-    let (x, y) = match placement::monitor_for_window(&monitors, pos.x, pos.y, old.width, old.height) {
-        Some(i) => placement::clamp(x, pos.y, new_width as u32, new_height as u32, &monitors[i].work_area),
-        None => (x, pos.y),
+    let (before_w, before_h) = (old_w.round() as u32, old_h.round() as u32);
+    let (x, y) = match placement::monitor_for_window(&monitors, px, py, before_w, before_h) {
+        Some(i) => placement::clamp(x, py, new_w as u32, new_h as u32, &monitors[i].work_area),
+        None => (x, py),
     };
-    let _ = w.set_position(Position::Physical(PhysicalPosition::new(x, y)));
+    move_to(&w, x, y);
 }
 
 /// One background thread for the panel: debounced snap/persist after moves

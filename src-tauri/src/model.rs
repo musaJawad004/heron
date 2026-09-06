@@ -165,20 +165,30 @@ pub struct HookEvent {
 }
 
 impl HookEvent {
-    /// Events that mean "a human needs to look at this session".
+    /// Events that mean "Claude is blocked and a human has to answer".
+    ///
+    /// `idle_prompt` is deliberately excluded: the CLI fires it once a session
+    /// has simply sat at its prompt for a while, so treating it as attention
+    /// turned every finished session orange. A finished turn is `Stop`, and it
+    /// is reported as such.
     pub fn requires_attention(&self) -> bool {
         match self.kind {
             HookEventKind::PermissionRequest => true,
             HookEventKind::Notification => matches!(
                 self.subtype.as_deref(),
                 Some("permission_prompt")
-                    | Some("idle_prompt")
                     | Some("elicitation_dialog")
                     | Some("elicitation_url_dialog")
                     | Some("agent_needs_input")
             ),
             _ => false,
         }
+    }
+
+    /// `idle_prompt`: Claude has been waiting at its prompt. Worth an optional
+    /// notification (`notify_on_idle`) but never an attention badge.
+    pub fn is_idle_prompt(&self) -> bool {
+        self.kind == HookEventKind::Notification && self.subtype.as_deref() == Some("idle_prompt")
     }
 
     /// Events that mean "Claude finished its turn".
