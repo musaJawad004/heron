@@ -101,7 +101,13 @@ pub fn active_monitor(monitors: &[MonitorInfo]) -> Option<usize> {
 
 /// The monitor a window rectangle belongs to: the one under its centre, else
 /// the one under its top-left corner.
-pub fn monitor_for_window(monitors: &[MonitorInfo], x: i32, y: i32, width: u32, height: u32) -> Option<usize> {
+pub fn monitor_for_window(
+    monitors: &[MonitorInfo],
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+) -> Option<usize> {
     let (cx, cy) = (x + width as i32 / 2, y + height as i32 / 2);
     monitors
         .iter()
@@ -169,7 +175,13 @@ fn keep(o: &PanelOrigin, size: (f64, f64), monitor: &MonitorInfo) -> Placement {
 /// Carry a saved origin from `from` to `to`, keeping the logical offset from
 /// the anchored edge and the top, so the panel lands in "the same place" on a
 /// monitor of another size or scale.
-fn translate(o: &PanelOrigin, edge: PanelEdge, size: (f64, f64), from: &MonitorInfo, to: &MonitorInfo) -> Placement {
+fn translate(
+    o: &PanelOrigin,
+    edge: PanelEdge,
+    size: (f64, f64),
+    from: &MonitorInfo,
+    to: &MonitorInfo,
+) -> Placement {
     let (fa, ta) = (&from.work_area, &to.work_area);
     let w_from = px(size.0, from.scale);
     let (w_to, h_to) = (px(size.0, to.scale), px(size.1, to.scale));
@@ -409,9 +421,20 @@ mod tests {
     #[test]
     fn popover_hangs_below_a_top_menu_bar_centred_on_the_icon() {
         let work_area = Rect::new(0, 50, 2880, 1750); // Retina, 25 pt menu bar
+        let tray = Rect::new(2000, 0, 60, 50);
+        let (x, y) = popover_position(&tray, (680, 920), &work_area, (16, 8));
+        // Centred under the icon; far enough from the edge that no clamping applies.
+        assert_eq!((x, y), (2000 + 30 - 340, 58));
+    }
+
+    #[test]
+    fn popover_centre_gives_way_to_the_inset_work_area() {
+        // An icon this close to the corner would push the window past the gap,
+        // so the clamp wins over centring.
+        let work_area = Rect::new(0, 50, 2880, 1750);
         let tray = Rect::new(2500, 0, 60, 50);
         let (x, y) = popover_position(&tray, (680, 920), &work_area, (16, 8));
-        assert_eq!((x, y), (2500 + 30 - 340, 58));
+        assert_eq!((x, y), (2880 - 16 - 680, 58));
     }
 
     #[test]

@@ -106,9 +106,12 @@ fn monitor_infos(app: &AppHandle) -> Vec<MonitorInfo> {
         .into_iter()
         .map(|m| {
             let bounds = Rect::new(m.position().x, m.position().y, m.size().width, m.size().height);
-            let is_primary =
-                primary.as_ref().map(|p| p.position() == m.position() && p.size() == m.size()).unwrap_or(false);
-            let has_cursor = cursor.map(|c| bounds.contains(c.x.floor() as i32, c.y.floor() as i32)).unwrap_or(false);
+            let is_primary = primary
+                .as_ref()
+                .map(|p| p.position() == m.position() && p.size() == m.size())
+                .unwrap_or(false);
+            let has_cursor =
+                cursor.map(|c| bounds.contains(c.x.floor() as i32, c.y.floor() as i32)).unwrap_or(false);
             MonitorInfo {
                 name: m.name().cloned(),
                 bounds,
@@ -127,7 +130,8 @@ fn monitor_infos(app: &AppHandle) -> Vec<MonitorInfo> {
 pub fn note_tray_rect(rect: &tauri::Rect) {
     let p = rect.position.to_physical::<f64>(1.0);
     let s = rect.size.to_physical::<f64>(1.0);
-    let r = Rect::new(p.x.round() as i32, p.y.round() as i32, s.width.round() as u32, s.height.round() as u32);
+    let r =
+        Rect::new(p.x.round() as i32, p.y.round() as i32, s.width.round() as u32, s.height.round() as u32);
     *TRAY_RECT.lock() = Some(r);
 }
 
@@ -181,8 +185,11 @@ pub fn popover_blurred(app: &AppHandle) {
 /// and keep it attached to the tray icon.
 pub fn popover_resized(app: &AppHandle, height: f64) {
     let Some(w) = window(app, POPOVER) else { return };
-    let height =
-        if height.is_finite() { height.clamp(POPOVER_MIN_HEIGHT, POPOVER_MAX_HEIGHT) } else { POPOVER_MIN_HEIGHT };
+    let height = if height.is_finite() {
+        height.clamp(POPOVER_MIN_HEIGHT, POPOVER_MAX_HEIGHT)
+    } else {
+        POPOVER_MIN_HEIGHT
+    };
     if let Some((_, current)) = logical_size(&w) {
         if (current - height).abs() < 0.5 {
             return;
@@ -204,7 +211,8 @@ fn position_popover(app: &AppHandle, w: &WebviewWindow) {
     let tray = *TRAY_RECT.lock();
     let target = match tray {
         Some(tray) => {
-            let (cx, cy) = (tray.x as f64 + tray.width as f64 / 2.0, tray.y as f64 + tray.height as f64 / 2.0);
+            let (cx, cy) =
+                (tray.x as f64 + tray.width as f64 / 2.0, tray.y as f64 + tray.height as f64 / 2.0);
             let monitor = app.monitor_from_point(cx, cy).ok().flatten().or_else(|| primary_monitor(app));
             monitor.map(|m| {
                 placement::popover_position(&tray, (size.width, size.height), &work_area_of(&m), gap_px(&m))
@@ -339,7 +347,9 @@ pub fn panel_resized(app: &AppHandle, width: f64, height: f64) {
     }
     let width = width.clamp(PANEL_MIN.0, PANEL_MAX.0);
     let height = height.clamp(PANEL_MIN.1, PANEL_MAX.1);
-    let (Ok(pos), Ok(old), Ok(scale)) = (w.outer_position(), w.outer_size(), w.scale_factor()) else { return };
+    let (Ok(pos), Ok(old), Ok(scale)) = (w.outer_position(), w.outer_size(), w.scale_factor()) else {
+        return;
+    };
     let new_width = (width * scale).round() as i32;
     let edge = app.state::<AppState>().settings().panel_edge;
     let _ = w.set_size(Size::Logical(LogicalSize::new(width, height)));
@@ -381,7 +391,10 @@ pub fn start_panel_thread(app: &AppHandle) {
 
 fn follow_active_screen(app: &AppHandle) {
     let settings = app.state::<AppState>().settings();
-    if !settings.show_panel || !settings.panel_follows_active_screen || since(&PANEL_MOVED_AT) < DRAG_SETTLE_MS {
+    if !settings.show_panel
+        || !settings.panel_follows_active_screen
+        || since(&PANEL_MOVED_AT) < DRAG_SETTLE_MS
+    {
         return;
     }
     let Some(w) = window(app, PANEL) else { return };

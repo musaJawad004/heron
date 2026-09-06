@@ -57,7 +57,8 @@ struct Applied {
 
 static PANEL_ITEM: OnceLock<MenuItem<Wry>> = OnceLock::new();
 static ICONS: OnceLock<Mutex<HashMap<IconKey, Image<'static>>>> = OnceLock::new();
-static APPLIED: Mutex<Applied> = Mutex::new(Applied { icon: None, title: None, tooltip: None, panel_shown: None });
+static APPLIED: Mutex<Applied> =
+    Mutex::new(Applied { icon: None, title: None, tooltip: None, panel_shown: None });
 
 fn panel_label(shown: bool) -> &'static str {
     if shown {
@@ -302,7 +303,10 @@ mod badge {
                     if (bits >> (width - 1 - col)) & 1 == 1 {
                         for sy in 0..SCALE {
                             for sx in 0..SCALE {
-                                on.push((x0 + (col * SCALE + sx) as i32, y0 + (row as u32 * SCALE + sy) as i32));
+                                on.push((
+                                    x0 + (col * SCALE + sx) as i32,
+                                    y0 + (row as u32 * SCALE + sy) as i32,
+                                ));
                             }
                         }
                     }
@@ -343,7 +347,8 @@ mod badge {
             let mut img = RgbaImage::from_pixel(32, 32, Rgba([255, 255, 255, 255]));
             dot(&mut img, 16.0, 16.0, 4.0, 2.0, [255, 159, 10, 255]);
             assert_eq!(img.get_pixel(16, 16).0, [255, 159, 10, 255]);
-            assert_eq!(img.get_pixel(16, 21).0[3], 0, "ring is transparent");
+            // Inside the ring band, clear of the antialiased outer edge.
+            assert_eq!(img.get_pixel(16, 20).0[3], 0, "ring is transparent");
             assert_eq!(img.get_pixel(16, 25).0, [255, 255, 255, 255], "outside untouched");
         }
 
@@ -362,7 +367,9 @@ mod badge {
         fn nine_plus_fits_the_canvas() {
             let mut img = RgbaImage::new(32, 32);
             count(&mut img, 10);
-            let lit = (0..32).flat_map(|y| (0..32).map(move |x| (x, y))).filter(|&(x, y)| img.get_pixel(x, y).0[3] > 0);
+            let lit = (0..32)
+                .flat_map(|y| (0..32).map(move |x| (x, y)))
+                .filter(|&(x, y)| img.get_pixel(x, y).0[3] > 0);
             let min_x = lit.map(|(x, _)| x).min().unwrap_or(32);
             assert!(min_x >= 12, "starts at column {min_x}");
         }
