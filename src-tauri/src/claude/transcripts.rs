@@ -540,15 +540,15 @@ mod tests {
     #[test]
     fn recent_sessions_merge_listing_and_history() {
         let f = Fixture::new();
-        let p1 = f.simple_transcript("-Users-adz-alpha", "id-1", "Refactor the parser", "/Users/adz/alpha");
-        let p2 = f.simple_transcript("-Users-adz-beta", "id-2", "Write docs", "/Users/adz/beta");
+        let p1 = f.simple_transcript("-Users-you-alpha", "id-1", "Refactor the parser", "/Users/you/alpha");
+        let p2 = f.simple_transcript("-Users-you-beta", "id-2", "Write docs", "/Users/you/beta");
         let base = SystemTime::UNIX_EPOCH + Duration::from_millis(1_700_000_000_000);
         f.set_mtime(&p1, base + Duration::from_secs(10));
         f.set_mtime(&p2, base + Duration::from_secs(20));
         f.write_history(&[
-            history_line("id-1", 1_700_000_050_000, "/Users/adz/alpha"),
+            history_line("id-1", 1_700_000_050_000, "/Users/you/alpha"),
             "garbage line".to_string(),
-            history_line("id-3", 1_700_000_005_000, "/Users/adz/gone"),
+            history_line("id-3", 1_700_000_005_000, "/Users/you/gone"),
             r#"{"display":"no session id","timestamp":1}"#.to_string(),
         ]);
         let recent = f.index().recent_sessions(10);
@@ -558,7 +558,7 @@ mod tests {
         let s1 = &recent[0];
         assert_eq!(s1.last_active_at, 1_700_000_050_000, "history newer than mtime wins");
         assert_eq!(s1.title.as_deref(), Some("Refactor the parser"));
-        assert_eq!(s1.cwd, "/Users/adz/alpha");
+        assert_eq!(s1.cwd, "/Users/you/alpha");
         assert_eq!(s1.git_branch.as_deref(), Some("main"));
         assert_eq!(s1.version.as_deref(), Some("2.1.260"));
         assert_eq!(s1.transcript_path.as_deref(), Some(p1.to_str().unwrap()));
@@ -572,7 +572,7 @@ mod tests {
         assert_eq!(s2.title.as_deref(), Some("Write docs"));
 
         let s3 = &recent[2];
-        assert_eq!(s3.cwd, "/Users/adz/gone", "history-only session keeps its project");
+        assert_eq!(s3.cwd, "/Users/you/gone", "history-only session keeps its project");
         assert_eq!(s3.transcript_path, None);
         assert_eq!(s3.title, None);
     }
@@ -581,7 +581,7 @@ mod tests {
     fn limit_is_respected_and_zero_is_empty() {
         let f = Fixture::new();
         for i in 0..5 {
-            f.simple_transcript("-Users-adz-p", &format!("id-{i}"), "hello", "/Users/adz/p");
+            f.simple_transcript("-Users-you-p", &format!("id-{i}"), "hello", "/Users/you/p");
         }
         let idx = f.index();
         assert_eq!(idx.recent_sessions(2).len(), 2);
@@ -592,13 +592,13 @@ mod tests {
     #[test]
     fn enrich_fills_missing_fields_only() {
         let f = Fixture::new();
-        let path = f.simple_transcript("-Users-adz-alpha", "id-1", "Refactor the parser", "/Users/adz/alpha");
+        let path = f.simple_transcript("-Users-you-alpha", "id-1", "Refactor the parser", "/Users/you/alpha");
         let idx = f.index();
         let running =
             Session { id: "id-1".into(), pid: Some(4), version: Some("9.9.9".into()), ..Default::default() };
         let s = idx.enrich(running);
         assert_eq!(s.title.as_deref(), Some("Refactor the parser"));
-        assert_eq!(s.cwd, "/Users/adz/alpha");
+        assert_eq!(s.cwd, "/Users/you/alpha");
         assert_eq!(s.git_branch.as_deref(), Some("main"));
         assert_eq!(s.version.as_deref(), Some("9.9.9"), "existing values are kept");
         assert_eq!(s.transcript_path.as_deref(), Some(path.to_str().unwrap()));
@@ -616,11 +616,11 @@ mod tests {
         let f = Fixture::new();
         let id = "id-t";
         let mut lines = preamble(id);
-        lines.push(command_line(id, "/Users/adz"));
+        lines.push(command_line(id, "/Users/you"));
         lines.push(serde_json::json!({"type":"system","subtype":"local_command","content":"<command-name>/resume</command-name>"}).to_string());
-        lines.push(serde_json::json!({"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"x","content":"ok"}]},"cwd":"/Users/adz"}).to_string());
-        lines.push(user_line("[Pasted text #1 +42 lines]   please   review\nthis", "/Users/adz", id));
-        f.write_transcript("-Users-adz", id, &lines);
+        lines.push(serde_json::json!({"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"x","content":"ok"}]},"cwd":"/Users/you"}).to_string());
+        lines.push(user_line("[Pasted text #1 +42 lines]   please   review\nthis", "/Users/you", id));
+        f.write_transcript("-Users-you", id, &lines);
         let s = f.index().recent_sessions(1).remove(0);
         assert_eq!(s.title.as_deref(), Some("please review this"));
     }
@@ -630,22 +630,22 @@ mod tests {
         let f = Fixture::new();
         let id = "id-n";
         let mut lines = preamble(id);
-        lines.push(command_line(id, "/Users/adz"));
-        f.write_transcript("-Users-adz", id, &lines);
+        lines.push(command_line(id, "/Users/you"));
+        f.write_transcript("-Users-you", id, &lines);
         let s = f.index().recent_sessions(1).remove(0);
         assert_eq!(s.title, None);
-        assert_eq!(s.cwd, "/Users/adz", "cwd still comes from the command line");
+        assert_eq!(s.cwd, "/Users/you", "cwd still comes from the command line");
     }
 
     #[test]
     fn subagent_transcripts_are_skipped() {
         let f = Fixture::new();
-        f.simple_transcript("-Users-adz-p", "main-id", "main prompt", "/Users/adz/p");
-        let sub_dir = f.projects().join("-Users-adz-p").join("main-id").join("subagents");
+        f.simple_transcript("-Users-you-p", "main-id", "main prompt", "/Users/you/p");
+        let sub_dir = f.projects().join("-Users-you-p").join("main-id").join("subagents");
         fs::create_dir_all(&sub_dir).unwrap();
         fs::write(
             sub_dir.join("agent-abc.jsonl"),
-            user_line("sub prompt", "/Users/adz/p", "agent-abc") + "\n",
+            user_line("sub prompt", "/Users/you/p", "agent-abc") + "\n",
         )
         .unwrap();
         fs::write(
@@ -654,9 +654,9 @@ mod tests {
         )
         .unwrap();
         // Legacy layout: agent transcripts next to the main one.
-        f.simple_transcript("-Users-adz-p", "agent-legacy", "legacy agent", "/Users/adz/p");
+        f.simple_transcript("-Users-you-p", "agent-legacy", "legacy agent", "/Users/you/p");
         // Not a transcript at all.
-        fs::write(f.projects().join("-Users-adz-p").join("notes.json"), "{}").unwrap();
+        fs::write(f.projects().join("-Users-you-p").join("notes.json"), "{}").unwrap();
         fs::write(f.projects().join("README.md"), "x").unwrap();
         let recent = f.index().recent_sessions(10);
         let ids: Vec<&str> = recent.iter().map(|s| s.id.as_str()).collect();
@@ -666,7 +666,7 @@ mod tests {
     #[test]
     fn cache_hit_on_same_mtime_and_size_miss_after_touch() {
         let f = Fixture::new();
-        let path = f.simple_transcript("-Users-adz-p", "id-c", "Title AAAA", "/Users/adz/p");
+        let path = f.simple_transcript("-Users-you-p", "id-c", "Title AAAA", "/Users/you/p");
         let base = SystemTime::UNIX_EPOCH + Duration::from_millis(1_700_000_000_000);
         f.set_mtime(&path, base);
         assert_eq!(f.index().recent_sessions(1)[0].title.as_deref(), Some("Title AAAA"));
@@ -686,12 +686,12 @@ mod tests {
         let entry = &parsed["entries"][path.to_str().unwrap()];
         assert_eq!(entry["mtime_ms"], 1_700_000_000_000u64);
         assert_eq!(entry["size"], fs::metadata(&path).unwrap().len());
-        assert_eq!(entry["cwd"], "/Users/adz/p");
+        assert_eq!(entry["cwd"], "/Users/you/p");
         assert_eq!(entry["git_branch"], "main");
         assert_eq!(entry["version"], "2.1.260");
 
         // Same size, same mtime, different content: a fresh index trusts the cache.
-        f.simple_transcript("-Users-adz-p", "id-c", "Title BBBB", "/Users/adz/p");
+        f.simple_transcript("-Users-you-p", "id-c", "Title BBBB", "/Users/you/p");
         f.set_mtime(&path, base);
         assert_eq!(f.index().recent_sessions(1)[0].title.as_deref(), Some("Title AAAA"), "cache hit");
 
@@ -729,10 +729,10 @@ mod tests {
     #[test]
     fn invalidate_and_new_files_are_picked_up() {
         let f = Fixture::new();
-        f.simple_transcript("-Users-adz-p", "id-1", "one", "/Users/adz/p");
+        f.simple_transcript("-Users-you-p", "id-1", "one", "/Users/you/p");
         let idx = f.index();
         assert_eq!(idx.recent_sessions(10).len(), 1);
-        f.simple_transcript("-Users-adz-q", "id-2", "two", "/Users/adz/q");
+        f.simple_transcript("-Users-you-q", "id-2", "two", "/Users/you/q");
         assert_eq!(idx.recent_sessions(10).len(), 2, "new project dir changes the signature");
         idx.invalidate();
         assert_eq!(idx.recent_sessions(10).len(), 2);
@@ -777,7 +777,7 @@ mod tests {
             lines.push(format!(r#"{{"type":"attachment","i":{i},"pad":"{}"}}"#, "x".repeat(80)));
         }
         lines.push(user_line("late prompt", "/late", id));
-        f.write_transcript("-Users-adz", id, &lines);
+        f.write_transcript("-Users-you", id, &lines);
         let s = f.index().recent_sessions(1).remove(0);
         assert_eq!(s.title, None, "prompt beyond the head is never read");
     }
@@ -799,19 +799,19 @@ mod tests {
     fn timing_300_fixtures() {
         let f = Fixture::new();
         for i in 0..300 {
-            let enc = format!("-Users-adz-proj{}", i % 20);
+            let enc = format!("-Users-you-proj{}", i % 20);
             let id = format!("{:08x}-0000-4000-8000-{:012x}", i, i);
             f.simple_transcript(
                 &enc,
                 &id,
                 &format!("Prompt number {i} with a bit of text"),
-                &format!("/Users/adz/proj{}", i % 20),
+                &format!("/Users/you/proj{}", i % 20),
             );
         }
         let mut history = Vec::new();
         for i in 0..300 {
             let id = format!("{:08x}-0000-4000-8000-{:012x}", i, i);
-            history.push(history_line(&id, 1_700_000_000_000 + i as u64, "/Users/adz/x"));
+            history.push(history_line(&id, 1_700_000_000_000 + i as u64, "/Users/you/x"));
         }
         f.write_history(&history);
 

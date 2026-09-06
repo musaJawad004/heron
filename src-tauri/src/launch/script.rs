@@ -222,8 +222,8 @@ mod tests {
     fn unix_script_quotes_space_and_apostrophe() {
         let a = args(&["--resume", "4e035c9a-1ab6-4026-aed1-0fa8731e7792", "--model", "opus"]);
         let spec = Spec {
-            cwd: Path::new("/Users/adz/My Projects/it's here"),
-            exe: Path::new("/Users/adz/.local/bin/claude"),
+            cwd: Path::new("/Users/you/My Projects/it's here"),
+            exe: Path::new("/Users/you/.local/bin/claude"),
             args: &a,
         };
         let s = unix_script(&spec).unwrap();
@@ -231,8 +231,8 @@ mod tests {
             # Heron: starts a Claude Code session. Safe to delete.\n\
             rm -f -- \"$0\"\n\
             export PATH=\"$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH\"\n\
-            cd '/Users/adz/My Projects/it'\\''s here' || { echo \"Heron: folder not found:\" '/Users/adz/My Projects/it'\\''s here'; read -r; exit 1; }\n\
-            exec '/Users/adz/.local/bin/claude' '--resume' '4e035c9a-1ab6-4026-aed1-0fa8731e7792' '--model' 'opus'\n";
+            cd '/Users/you/My Projects/it'\\''s here' || { echo \"Heron: folder not found:\" '/Users/you/My Projects/it'\\''s here'; read -r; exit 1; }\n\
+            exec '/Users/you/.local/bin/claude' '--resume' '4e035c9a-1ab6-4026-aed1-0fa8731e7792' '--model' 'opus'\n";
         assert_eq!(s, expected);
     }
 

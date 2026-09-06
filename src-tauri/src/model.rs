@@ -52,7 +52,7 @@ impl SessionStatus {
 pub struct Session {
     /// Claude Code session id (UUID string). Also the transcript file stem.
     pub id: String,
-    /// Display name from the live registry (`name`), e.g. "civl-mobile-app-1b".
+    /// Display name from the live registry (`name`), e.g. "mobile-app-1b".
     pub name: Option<String>,
     /// First user prompt, whitespace-collapsed, max 80 chars.
     pub title: Option<String>,

@@ -53,11 +53,11 @@ Heron's own files live in the Tauri app-data dir: macOS
 One file per running CLI process, rewritten on every status change.
 
 ```json
-{"pid":3412,"sessionId":"4e035c9a-1ab6-4026-aed1-0fa8731e7792","cwd":"/Users/adz/civl-mobile-app",
+{"pid":3412,"sessionId":"4e035c9a-1ab6-4026-aed1-0fa8731e7792","cwd":"/Users/you/mobile-app",
  "startedAt":1788684708093,"procStart":"Sun Sep  6 08:51:47 2026","version":"2.1.263",
  "peerProtocol":1,"peerFeatures":["notify_idle","reply_across_default_dirs","artifact_yield"],
  "kind":"interactive","entrypoint":"cli","pidDomain":"darwin",
- "messagingSocketPath":"/tmp/cc-socks/3412.sock","name":"civl-mobile-app-1b","nameSource":"derived",
+ "messagingSocketPath":"/tmp/cc-socks/3412.sock","name":"mobile-app-1b","nameSource":"derived",
  "nameSince":1788684708094,"updatedAt":1788684844819,"status":"idle","statusUpdatedAt":1788684844819,
  "bridgeSessionId":"session_013zRkg3XpHjccY8Bo4FPPmo"}
 ```
@@ -79,7 +79,7 @@ from the lines. Relevant line shapes:
 {"type":"permission-mode","permissionMode":"auto","sessionId":"…"}
 {"parentUuid":null,"isSidechain":false,"promptId":"…","type":"user",
  "message":{"role":"user","content":"Please …"},"timestamp":"2026-09-04T13:37:41.586Z",
- "uuid":"…","cwd":"/Users/adz","sessionId":"…","version":"2.1.260","gitBranch":"main"}
+ "uuid":"…","cwd":"/Users/you","sessionId":"…","version":"2.1.260","gitBranch":"main"}
 {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"…"}]},"cwd":"…"}
 {"type":"system","subtype":"local_command","content":"<command-name>/resume</command-name>…"}
 {"type":"cost-state","sessionId":"…","totalCostUSD":0}
@@ -94,7 +94,7 @@ from the lines. Relevant line shapes:
 * Files can be many MB: read only the first 64 KB; mtime = recency.
 
 ### Prompt history — `history.jsonl`
-`{"display":"…","pastedContents":{},"timestamp":1788685051331,"project":"/Users/adz","sessionId":"…"}`
+`{"display":"…","pastedContents":{},"timestamp":1788685051331,"project":"/Users/you","sessionId":"…"}`
 per prompt. Cheap index of sessionId → project, last time.
 
 ### User settings — `settings.json`

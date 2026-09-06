@@ -209,11 +209,11 @@ mod tests {
     use std::fs;
 
     /// Verbatim from docs/ARCHITECTURE.md.
-    const DOC_SAMPLE: &str = r#"{"pid":3412,"sessionId":"4e035c9a-1ab6-4026-aed1-0fa8731e7792","cwd":"/Users/adz/civl-mobile-app",
+    const DOC_SAMPLE: &str = r#"{"pid":3412,"sessionId":"4e035c9a-1ab6-4026-aed1-0fa8731e7792","cwd":"/Users/you/mobile-app",
  "startedAt":1788684708093,"procStart":"Sun Sep  6 08:51:47 2026","version":"2.1.263",
  "peerProtocol":1,"peerFeatures":["notify_idle","reply_across_default_dirs","artifact_yield"],
  "kind":"interactive","entrypoint":"cli","pidDomain":"darwin",
- "messagingSocketPath":"/tmp/cc-socks/3412.sock","name":"civl-mobile-app-1b","nameSource":"derived",
+ "messagingSocketPath":"/tmp/cc-socks/3412.sock","name":"mobile-app-1b","nameSource":"derived",
  "nameSince":1788684708094,"updatedAt":1788684844819,"status":"idle","statusUpdatedAt":1788684844819,
  "bridgeSessionId":"session_013zRkg3XpHjccY8Bo4FPPmo"}"#;
 
@@ -239,7 +239,7 @@ mod tests {
 
         fn write_session(&self, pid: u32, id: &str, status: Option<&str>, started: u64, updated: u64) {
             let mut v = json!({
-                "pid": pid, "sessionId": id, "cwd": format!("/Users/adz/{id}"), "startedAt": started,
+                "pid": pid, "sessionId": id, "cwd": format!("/Users/you/{id}"), "startedAt": started,
                 "updatedAt": updated, "statusUpdatedAt": updated - 1, "version": "2.1.263",
                 "name": format!("{id}-1a"), "kind": "interactive", "entrypoint": "cli",
             });
@@ -259,8 +259,8 @@ mod tests {
         assert_eq!(snap.len(), 1);
         let s = &snap[0];
         assert_eq!(s.id, "4e035c9a-1ab6-4026-aed1-0fa8731e7792");
-        assert_eq!(s.name.as_deref(), Some("civl-mobile-app-1b"));
-        assert_eq!(s.cwd, "/Users/adz/civl-mobile-app");
+        assert_eq!(s.name.as_deref(), Some("mobile-app-1b"));
+        assert_eq!(s.cwd, "/Users/you/mobile-app");
         assert_eq!(s.pid, Some(3412));
         assert_eq!(s.status, SessionStatus::Idle);
         assert_eq!(s.started_at, Some(1788684708093));

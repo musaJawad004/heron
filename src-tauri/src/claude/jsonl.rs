@@ -190,10 +190,10 @@ mod tests {
         let lines = vec![
             r#"{"type":"mode","mode":"normal","sessionId":"s"}"#.to_string(),
             "not json at all".to_string(),
-            r#"{"parentUuid":null,"isSidechain":false,"promptId":"p","type":"user","message":{"role":"user","content":"Please fix the build"},"timestamp":"2026-09-04T13:37:41.586Z","uuid":"u","cwd":"/Users/adz","sessionId":"s","version":"2.1.260","gitBranch":"main"}"#.to_string(),
+            r#"{"parentUuid":null,"isSidechain":false,"promptId":"p","type":"user","message":{"role":"user","content":"Please fix the build"},"timestamp":"2026-09-04T13:37:41.586Z","uuid":"u","cwd":"/Users/you","sessionId":"s","version":"2.1.260","gitBranch":"main"}"#.to_string(),
         ];
         let info = parse_head(&lines);
-        assert_eq!(info.cwd.as_deref(), Some("/Users/adz"));
+        assert_eq!(info.cwd.as_deref(), Some("/Users/you"));
         assert_eq!(info.git_branch.as_deref(), Some("main"));
         assert_eq!(info.version.as_deref(), Some("2.1.260"));
         assert_eq!(info.title.as_deref(), Some("Please fix the build"));

@@ -94,7 +94,7 @@ mod tests {
     use serde_json::json;
 
     fn user_string(text: &str) -> Value {
-        json!({"type":"user","message":{"role":"user","content":text},"cwd":"/Users/adz"})
+        json!({"type":"user","message":{"role":"user","content":text},"cwd":"/Users/you"})
     }
 
     #[test]
