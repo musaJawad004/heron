@@ -9,3 +9,4 @@ dist/
 *.dmg
 *.zip
 .DS_Store
+.claude/worktrees/
