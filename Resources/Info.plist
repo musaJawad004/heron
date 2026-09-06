@@ -5,17 +5,17 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>Vigil</string>
+    <string>Heron</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.glixentech.vigil</string>
+    <string>com.glixentech.heron</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Vigil</string>
+    <string>Heron</string>
     <key>CFBundleDisplayName</key>
-    <string>Vigil</string>
+    <string>Heron</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -31,9 +31,9 @@
     <key>NSHumanReadableCopyright</key>
     <string>MIT License</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Vigil uses Apple Events only to bring the terminal tab running a Claude Code session to the front.</string>
+    <string>Heron uses Apple Events only to bring the terminal tab running a Claude Code session to the front.</string>
     <key>NSUserNotificationsUsageDescription</key>
-    <string>Vigil shows a local notification when a Claude Code session needs your attention or finishes.</string>
+    <string>Heron shows a local notification when a Claude Code session needs your attention or finishes.</string>
     <key>NSSupportsAutomaticTermination</key>
     <false/>
     <key>NSSupportsSuddenTermination</key>

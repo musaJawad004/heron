@@ -1,6 +1,6 @@
 import Foundation
 
-/// Watches the spool directory (`VigilPaths.eventsDir`) that the installed
+/// Watches the spool directory (`HeronPaths.eventsDir`) that the installed
 /// hook script writes one JSON file per event into, parses each file into a
 /// `HookEvent`, deletes it, and reports it.
 ///
@@ -13,7 +13,7 @@ import Foundation
 public final class HookEventWatcher: @unchecked Sendable {
     public let spoolDir: URL
 
-    public init(spoolDir: URL = VigilPaths.eventsDir) {
+    public init(spoolDir: URL = HeronPaths.eventsDir) {
         self.spoolDir = spoolDir
     }
 
@@ -28,6 +28,6 @@ public final class HookEventWatcher: @unchecked Sendable {
     /// Parse the raw stdin JSON that Claude Code handed the hook.
     public static func parse(_ data: Data) throws -> HookEvent {
         // STUB
-        throw NSError(domain: "Vigil.HookEventWatcher", code: 1, userInfo: [NSLocalizedDescriptionKey: "not implemented"])
+        throw NSError(domain: "Heron.HookEventWatcher", code: 1, userInfo: [NSLocalizedDescriptionKey: "not implemented"])
     }
 }

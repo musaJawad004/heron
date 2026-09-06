@@ -7,15 +7,15 @@ app:
 	Scripts/build-app.sh release
 
 run: app
-	open dist/Vigil.app
+	open dist/Heron.app
 
 test:
 	swift test
 
 install: app
-	rm -rf /Applications/Vigil.app
-	cp -R dist/Vigil.app /Applications/Vigil.app
-	@echo "Installed to /Applications/Vigil.app"
+	rm -rf /Applications/Heron.app
+	cp -R dist/Heron.app /Applications/Heron.app
+	@echo "Installed to /Applications/Heron.app"
 
 clean:
 	rm -rf .build dist

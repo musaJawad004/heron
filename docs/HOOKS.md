@@ -9,13 +9,13 @@ Source: https://code.claude.com/docs/en/hooks.md
   "hooks": {
     "Notification": [
       { "matcher": "permission_prompt|idle_prompt|elicitation_dialog",
-        "hooks": [ { "type": "command", "command": "/Users/me/Library/Application Support/Vigil/bin/vigil-hook", "async": true, "timeout": 5 } ] }
+        "hooks": [ { "type": "command", "command": "/Users/me/Library/Application Support/Heron/bin/heron-hook", "async": true, "timeout": 5 } ] }
     ],
-    "Stop":            [ { "hooks": [ { "type": "command", "command": "…/vigil-hook", "async": true, "timeout": 5 } ] } ],
-    "SessionStart":    [ { "hooks": [ { "type": "command", "command": "…/vigil-hook", "async": true, "timeout": 5 } ] } ],
-    "SessionEnd":      [ { "hooks": [ { "type": "command", "command": "…/vigil-hook", "async": true, "timeout": 5 } ] } ],
-    "PermissionRequest": [ { "hooks": [ { "type": "command", "command": "…/vigil-hook", "async": true, "timeout": 5 } ] } ],
-    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "…/vigil-hook", "async": true, "timeout": 5 } ] } ]
+    "Stop":            [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "async": true, "timeout": 5 } ] } ],
+    "SessionStart":    [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "async": true, "timeout": 5 } ] } ],
+    "SessionEnd":      [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "async": true, "timeout": 5 } ] } ],
+    "PermissionRequest": [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "async": true, "timeout": 5 } ] } ],
+    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "async": true, "timeout": 5 } ] } ]
   }
 }
 ```
@@ -30,7 +30,7 @@ Source: https://code.claude.com/docs/en/hooks.md
 * Commands containing spaces (our path has "Application Support") must be
   quoted inside the `command` string — or better, use `"command": "/bin/sh"`
   with `"args": ["<path>"]`? No: prefer the shell form with the path quoted:
-  `"command": "\"$HOME/Library/Application Support/Vigil/bin/vigil-hook\""`.
+  `"command": "\"$HOME/Library/Application Support/Heron/bin/heron-hook\""`.
   `$HOME` is expanded by `/bin/sh`, so the entry stays valid if the home moves.
 
 ## Payloads (stdin JSON)
@@ -54,7 +54,7 @@ Common to every event: `session_id`, `hook_event_name`, `cwd`, `transcript_path`
 `elicitation_response`, `agent_needs_input`, `agent_completed`,
 `quota_auto_resume_fired`, `quota_auto_resume_stale`, `quota_auto_resume_disabled`.
 
-Privacy rule for Vigil: keep `session_id`, `cwd`, `transcript_path`,
+Privacy rule for Heron: keep `session_id`, `cwd`, `transcript_path`,
 `hook_event_name`, `notification_type`/`reason`/`source`, `tool_name`, `title`,
 `message`. Drop `tool_input` and `user_input` (they can contain secrets) — the
 receiver script spools the raw JSON, but `HookEventWatcher.parse` must only

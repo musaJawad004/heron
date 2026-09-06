@@ -8,7 +8,7 @@ import Foundation
 /// - Never read whole multi-megabyte transcripts on the main thread; read only
 ///   the head of each file (first ~64 KB) to find `cwd`, `gitBranch`, `version`
 ///   and the first `"type":"user"` message with string content.
-/// - Cache results on disk under `VigilPaths.cacheDir` keyed by path + mtime +
+/// - Cache results on disk under `HeronPaths.cacheDir` keyed by path + mtime +
 ///   size so relaunches are instant.
 /// - `recentSessions(limit:)` returns sessions sorted by `lastActiveAt` desc.
 public actor TranscriptIndex {
@@ -17,9 +17,9 @@ public actor TranscriptIndex {
     public let cacheDir: URL
 
     public init(
-        projectsDir: URL = VigilPaths.claudeProjectsDir,
-        historyFile: URL = VigilPaths.claudeHistoryFile,
-        cacheDir: URL = VigilPaths.cacheDir
+        projectsDir: URL = HeronPaths.claudeProjectsDir,
+        historyFile: URL = HeronPaths.claudeHistoryFile,
+        cacheDir: URL = HeronPaths.cacheDir
     ) {
         self.projectsDir = projectsDir
         self.historyFile = historyFile

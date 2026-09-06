@@ -2,24 +2,24 @@
 import PackageDescription
 
 let package = Package(
-    name: "Vigil",
+    name: "Heron",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "Vigil", targets: ["Vigil"]),
+        .executable(name: "Heron", targets: ["Heron"]),
     ],
     targets: [
         .executableTarget(
-            name: "Vigil",
-            path: "Sources/Vigil",
+            name: "Heron",
+            path: "Sources/Heron",
             resources: [.copy("Resources")],
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency"),
             ]
         ),
         .testTarget(
-            name: "VigilTests",
-            dependencies: ["Vigil"],
-            path: "Tests/VigilTests"
+            name: "HeronTests",
+            dependencies: ["Heron"],
+            path: "Tests/HeronTests"
         ),
     ]
 )

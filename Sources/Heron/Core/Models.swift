@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Shared domain types
 //
-// These types are the contract between every module in Vigil. Keep them
+// These types are the contract between every module in Heron. Keep them
 // small, value-typed and free of AppKit/SwiftUI imports so the core can be
 // unit-tested without a UI.
 
@@ -144,7 +144,7 @@ public struct HookEvent: Identifiable, Hashable, Codable, Sendable {
     public let message: String?
     /// Tool name for tool / permission events, when present.
     public let toolName: String?
-    /// When Vigil read the event from the spool.
+    /// When Heron read the event from the spool.
     public let receivedAt: Date
 
     public init(
@@ -186,7 +186,7 @@ public struct HookEvent: Identifiable, Hashable, Codable, Sendable {
 
 // MARK: - Terminal apps
 
-/// Terminal emulators Vigil knows how to open a new Claude session in.
+/// Terminal emulators Heron knows how to open a new Claude session in.
 public enum TerminalApp: String, Codable, CaseIterable, Identifiable, Sendable {
     case terminal = "com.apple.Terminal"
     case iterm = "com.googlecode.iterm2"
@@ -216,9 +216,9 @@ public enum TerminalApp: String, Codable, CaseIterable, Identifiable, Sendable {
 
 // MARK: - Well-known paths
 
-/// Locations Vigil reads from or writes to. Everything is under the user's
-/// home directory; Vigil never talks to the network.
-public enum VigilPaths {
+/// Locations Heron reads from or writes to. Everything is under the user's
+/// home directory; Heron never talks to the network.
+public enum HeronPaths {
     public static var home: URL { FileManager.default.homeDirectoryForCurrentUser }
 
     /// `~/.claude`
@@ -232,16 +232,16 @@ public enum VigilPaths {
     /// `~/.claude/settings.json` — user settings where hooks are registered.
     public static var claudeSettingsFile: URL { claudeDir.appendingPathComponent("settings.json") }
 
-    /// `~/Library/Application Support/Vigil`
+    /// `~/Library/Application Support/Heron`
     public static var appSupportDir: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? home.appendingPathComponent("Library/Application Support", isDirectory: true)
-        return base.appendingPathComponent("Vigil", isDirectory: true)
+        return base.appendingPathComponent("Heron", isDirectory: true)
     }
     /// Spool directory hook scripts drop event JSON files into.
     public static var eventsDir: URL { appSupportDir.appendingPathComponent("events", isDirectory: true) }
     /// Where the hook receiver script is installed.
-    public static var hookScript: URL { appSupportDir.appendingPathComponent("bin/vigil-hook", isDirectory: false) }
+    public static var hookScript: URL { appSupportDir.appendingPathComponent("bin/heron-hook", isDirectory: false) }
     /// On-disk cache for the transcript index.
     public static var cacheDir: URL { appSupportDir.appendingPathComponent("cache", isDirectory: true) }
 }

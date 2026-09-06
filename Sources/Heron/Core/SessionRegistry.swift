@@ -13,7 +13,7 @@ import Foundation
 public final class SessionRegistry: @unchecked Sendable {
     public let directory: URL
 
-    public init(directory: URL = VigilPaths.claudeSessionsDir) {
+    public init(directory: URL = HeronPaths.claudeSessionsDir) {
         self.directory = directory
     }
 

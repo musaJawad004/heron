@@ -7,7 +7,7 @@ struct MenuBarView: View {
     var body: some View {
         // STUB — the menubar agent replaces this.
         VStack(alignment: .leading, spacing: 8) {
-            Text("Vigil").font(.headline)
+            Text("Heron").font(.headline)
             Text("\(state.runningCount) running").font(.caption)
             Button("New Session…") { state.newSessionWithPicker() }
             SettingsLink { Text("Settings…") }

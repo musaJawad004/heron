@@ -1,5 +1,5 @@
 import XCTest
-@testable import Vigil
+@testable import Heron
 
 final class ModelsTests: XCTestCase {
     func testStatusParsing() {

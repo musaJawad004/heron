@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The always-on-top "vigil" widget content.
+/// The always-on-top "heron" widget content.
 struct PanelView: View {
     @Environment(AppState.self) private var state
 

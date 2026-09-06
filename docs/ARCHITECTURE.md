@@ -1,14 +1,14 @@
-# Vigil architecture
+# Heron architecture
 
-Vigil is a macOS menu bar app (SwiftUI + AppKit, Swift Package, macOS 14+) that
+Heron is a macOS menu bar app (SwiftUI + AppKit, Swift Package, macOS 14+) that
 watches Claude Code CLI sessions on the local machine. **Nothing leaves the
 Mac: no network code exists in this repository.** All state is read from
 `~/.claude` (written by the Claude Code CLI itself) and from
-`~/Library/Application Support/Vigil`.
+`~/Library/Application Support/Heron`.
 
 ```
-Sources/Vigil
-├── App/        VigilApp (@main, MenuBarExtra + Settings scenes), AppState (hub)
+Sources/Heron
+├── App/        HeronApp (@main, MenuBarExtra + Settings scenes), AppState (hub)
 ├── Core/       Models (shared contract), SessionRegistry (live), TranscriptIndex (history)
 ├── Hooks/      HookInstaller (settings.json), HookEventWatcher (spool dir), Notifier
 ├── Launch/     TerminalLauncher (new / resume / focus in a terminal app)
@@ -78,7 +78,7 @@ transcript for the title.
 Where hooks get registered. Merge carefully; other tools may own keys here.
 
 ## Hook receiver
-`HookInstaller` writes `~/Library/Application Support/Vigil/bin/vigil-hook`
+`HookInstaller` writes `~/Library/Application Support/Heron/bin/heron-hook`
 and registers it in settings.json. The script only spools stdin to
-`~/Library/Application Support/Vigil/events/<ts>-<pid>.json`. See
+`~/Library/Application Support/Heron/events/<ts>-<pid>.json`. See
 `docs/HOOKS.md` for the payloads.

@@ -214,7 +214,7 @@ public final class AppState {
         panel.prompt = "Start Claude here"
         panel.message = "Choose the project folder for the new Claude Code session"
         let base = settings.defaultProjectsFolder
-        panel.directoryURL = base.isEmpty ? VigilPaths.home : URL(fileURLWithPath: base)
+        panel.directoryURL = base.isEmpty ? HeronPaths.home : URL(fileURLWithPath: base)
         NSApp.activate(ignoringOtherApps: true)
         if panel.runModal() == .OK, let url = panel.url {
             newSession(in: url)

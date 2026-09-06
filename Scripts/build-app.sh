@@ -1,10 +1,10 @@
 #!/bin/bash
-# Builds Vigil.app from the Swift package. No Xcode project needed.
+# Builds Heron.app from the Swift package. No Xcode project needed.
 #   Scripts/build-app.sh [debug|release]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 CONFIG="${1:-release}"
-APP_NAME="Vigil"
+APP_NAME="Heron"
 OUT_DIR="dist"
 APP="$OUT_DIR/$APP_NAME.app"
 
