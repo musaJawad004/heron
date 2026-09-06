@@ -265,8 +265,14 @@ pub(crate) fn kill_term(pid: u32) -> Result<(), LaunchError> {
 // ---- process helpers shared by the platform modules --------------------------
 
 /// Output of a child that ran to completion.
+///
+/// Which parts matter depends on the platform: the macOS and Linux focus paths
+/// read stdout back from `osascript` and `wmctrl`, while Windows only needs the
+/// exit status. Everything here is used by some target, so the unused warnings
+/// are silenced rather than the API split three ways.
 pub(crate) struct Finished {
     pub status: ExitStatus,
+    #[allow(dead_code)]
     pub stdout: Vec<u8>,
     pub stderr: Vec<u8>,
 }
@@ -275,6 +281,7 @@ impl Finished {
     pub fn success(&self) -> bool {
         self.status.success()
     }
+    #[allow(dead_code)]
     pub fn stdout_text(&self) -> String {
         String::from_utf8_lossy(&self.stdout).trim().to_string()
     }
@@ -622,13 +629,15 @@ mod tests {
     #[test]
     fn default_terminal_is_installed() {
         let list = installed_terminals();
-        assert!(!list.is_empty());
-        assert_eq!(default_terminal(), list[0].id);
-        if cfg!(target_os = "macos") {
-            assert!(list.iter().any(|t| t.id == TerminalApp::Terminal));
-        }
-        if cfg!(windows) {
-            assert!(list.iter().any(|t| t.id == TerminalApp::Cmd));
+        // macOS and Windows always ship one, so the list can be relied on.
+        // A headless Linux box legitimately has none, and the app is expected
+        // to report that rather than pretend otherwise, so do not assert here.
+        #[cfg(target_os = "macos")]
+        assert!(list.iter().any(|t| t.id == TerminalApp::Terminal), "Terminal.app is always present");
+        #[cfg(windows)]
+        assert!(list.iter().any(|t| t.id == TerminalApp::Cmd), "cmd.exe is always present");
+        if !list.is_empty() {
+            assert_eq!(default_terminal(), list[0].id, "the default is the first offered");
         }
     }
 }
