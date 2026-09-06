@@ -45,8 +45,9 @@
         "visible": false,
         "focus": false,
         "focusable": false,
+        "acceptFirstMouse": true,
         "visibleOnAllWorkspaces": true,
-        "windowEffects": { "effects": ["hudWindow"], "radius": 12 }
+        "windowEffects": { "effects": ["popover"], "state": "active", "radius": 12 }
       },
       {
         "label": "settings",

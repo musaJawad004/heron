@@ -6,9 +6,11 @@ pub mod commands;
 pub mod hooks;
 pub mod launch;
 pub mod model;
+pub mod placement;
 pub mod settings;
 pub mod state;
 pub mod tray;
+pub mod window_commands;
 pub mod windows;
 
 use tauri::{Manager, WindowEvent};
@@ -34,20 +36,28 @@ pub fn run() {
             tray::create(&handle)?;
             state::start(&handle);
 
+            windows::configure_native(&handle);
             let show_panel = handle.state::<state::AppState>().settings().show_panel;
             windows::set_panel_visible(&handle, show_panel);
+            windows::start_panel_thread(&handle);
             Ok(())
         })
-        .on_window_event(|window, event| match event {
-            WindowEvent::Focused(false) if window.label() == "popover" => {
-                let _ = window.hide();
-            }
-            WindowEvent::CloseRequested { api, .. } if window.label() != "panel" => {
+        .on_window_event(|window, event| {
+            let app = window.app_handle();
+            match (window.label(), event) {
+                (windows::POPOVER, WindowEvent::Focused(false)) => windows::popover_blurred(app),
+                (windows::PANEL, WindowEvent::Moved(_)) => windows::panel_window_moved(),
                 // Keep the app alive; windows are reopened from the tray.
-                let _ = window.hide();
-                api.prevent_close();
+                (windows::SETTINGS, WindowEvent::CloseRequested { api, .. }) => {
+                    api.prevent_close();
+                    windows::settings_close_requested(app);
+                }
+                (windows::POPOVER, WindowEvent::CloseRequested { api, .. }) => {
+                    api.prevent_close();
+                    windows::hide_popover(app);
+                }
+                _ => {}
             }
-            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_snapshot,
@@ -76,6 +86,7 @@ pub fn run() {
             commands::panel_moved,
             commands::open_url,
             commands::quit,
+            window_commands::popover_resized,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Heron")
