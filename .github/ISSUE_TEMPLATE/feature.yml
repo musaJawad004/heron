@@ -1,0 +1,20 @@
+name: Feature request
+description: Something Heron should do that it does not
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Heron stays small on purpose. The bar is "does this make watching Claude
+        Code sessions simpler or safer". Two things are never on the table:
+        network access of any kind, and reading `~/.claude/sessions/*.key`.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that Heron makes hard today?
+    validations: { required: true }
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you have in mind

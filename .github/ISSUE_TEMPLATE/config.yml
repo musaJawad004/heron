@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or idea
+    url: https://github.com/musaJawad004/heron/discussions
+    about: For anything that is not a bug or a concrete request.

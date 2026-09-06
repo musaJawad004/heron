@@ -1,0 +1,50 @@
+name: Bug report
+description: Something behaves differently from what it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not paste prompt text or session titles. Heron works with your
+        Claude Code sessions, and issues are public.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what happened instead.
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps
+      placeholder: |
+        1. …
+        2. …
+    validations: { required: true }
+  - type: input
+    id: os
+    attributes:
+      label: OS and version
+      placeholder: macOS 15.1 Apple silicon / Windows 11 / Fedora 41
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes:
+      label: Heron version
+      description: Settings → About, or the release you downloaded.
+    validations: { required: true }
+  - type: input
+    id: monitors
+    attributes:
+      label: Monitor setup
+      description: Helpful for anything about window placement. Sizes and scale factors if you know them.
+      placeholder: 2x built-in 1512x982 plus a 1x external 1920x1080 to the right
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log output
+      description: |
+        macOS `~/Library/Logs/com.muhammadmusadev.heron/`,
+        Windows `%APPDATA%\com.muhammadmusadev.heron\logs\`,
+        Linux `~/.local/share/com.muhammadmusadev.heron/logs/`.
+      render: text
