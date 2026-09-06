@@ -282,10 +282,17 @@ fn position_popover(app: &AppHandle, w: &WebviewWindow) {
     let size = (width.round() as u32, height.round() as u32);
     let raw = *TRAY_RECT.lock();
     let monitors = monitor_infos(app);
-    let on = raw.and_then(|t| placement::tray_monitor(t.x, t.y, &monitors).map(|i| (t, i)));
+    let on =
+        raw.and_then(|t| placement::tray_monitor((t.x, t.y, t.width, t.height), &monitors).map(|i| (t, i)));
     let target = match on {
         Some((tray, i)) => {
             let m = &monitors[i];
+            log::info!(
+                "tray resolved to monitor {:?} bounds={:?} device_scale={}",
+                m.name,
+                m.bounds,
+                m.device_scale
+            );
             let scale = if m.device_scale > 0.0 { m.device_scale } else { 1.0 };
             let tray = Rect::new(
                 (tray.x / scale).round() as i32,

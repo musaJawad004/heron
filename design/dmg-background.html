@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { width:660px; height:400px; overflow:hidden;
+         font-family:-apple-system,"SF Pro Text",system-ui,sans-serif;
+         background:#0d1b24; position:relative; }
+  /* Deep water gradient, the same ink the app icon sits on. */
+  .sky { position:absolute; inset:0;
+         background:
+           radial-gradient(120% 90% at 18% 0%, #24506a 0%, rgba(36,80,106,0) 55%),
+           radial-gradient(90% 80% at 92% 12%, #1d6b6b 0%, rgba(29,107,107,0) 50%),
+           radial-gradient(140% 120% at 50% 120%, #0a1620 0%, rgba(10,22,32,0) 60%),
+           linear-gradient(160deg, #16303f 0%, #0b1620 100%); }
+  /* Soft light blooms so the flat gradient does not band. */
+  .bloom { position:absolute; border-radius:50%; filter:blur(60px); opacity:.5; }
+  .b1 { width:320px; height:320px; left:-60px; top:-120px; background:#3d8bff; opacity:.22; }
+  .b2 { width:280px; height:280px; right:-40px; bottom:-120px; background:#22d3c5; opacity:.16; }
+  /* Faint heron watermark behind everything. */
+  .mark { position:absolute; right:-30px; top:20px; width:300px; opacity:.05; }
+  .grain { position:absolute; inset:0; opacity:.35;
+           background-image:radial-gradient(rgba(255,255,255,.35) .5px, transparent .5px);
+           background-size:3px 3px; }
+  .title { position:absolute; top:44px; left:0; right:0; text-align:center;
+           color:rgba(255,255,255,.95); font-size:19px; font-weight:600; letter-spacing:.2px; }
+  .sub { position:absolute; top:74px; left:0; right:0; text-align:center;
+         color:rgba(255,255,255,.5); font-size:12.5px; font-weight:450; }
+  /* The two drop targets sit at 180,190 and 480,190 (see tauri.conf.json). */
+  .slot { position:absolute; top:132px; width:128px; height:128px; border-radius:26px;
+          border:1px dashed rgba(255,255,255,.14); }
+  .s1 { left:116px; } .s2 { left:416px; }
+  .arrow { position:absolute; top:186px; left:268px; width:124px; height:22px; }
+  .foot { position:absolute; bottom:34px; left:0; right:0; text-align:center;
+          color:rgba(255,255,255,.34); font-size:11px; letter-spacing:.3px; }
+</style></head>
+<body>
+  <div class="sky"></div>
+  <div class="bloom b1"></div><div class="bloom b2"></div>
+  <svg class="mark" viewBox="0 0 64 64">
+    <g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M24 50 C 24 38, 34 36, 36 26 C 37 20, 34 16, 32 13"/><path d="M32 13 L 46 9"/>
+    </g>
+    <circle cx="31" cy="13" r="5" fill="#fff"/>
+    <path fill="#fff" d="M10 46 C 10 40, 18 38, 26 40 C 36 42, 40 48, 40 52 C 38 58, 26 60, 18 56 C 12 54, 10 50, 10 46 Z"/>
+    <g fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"><path d="M24 58 L 24 62"/><path d="M32 58 L 34 62"/></g>
+  </svg>
+  <div class="grain"></div>
+  <div class="title">Install Heron</div>
+  <div class="sub">Drag the app into your Applications folder</div>
+  <div class="slot s1"></div><div class="slot s2"></div>
+  <svg class="arrow" viewBox="0 0 124 22">
+    <defs><linearGradient id="g" x1="0" x2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#fff" stop-opacity=".55"/></linearGradient></defs>
+    <path d="M2 11 H108" stroke="url(#g)" stroke-width="2" stroke-linecap="round" stroke-dasharray="1 7"/>
+    <path d="M104 4 L116 11 L104 18 Z" fill="#fff" fill-opacity=".55"/>
+  </svg>
+  <div class="foot">Local only · no network · MIT</div>
+</body></html>

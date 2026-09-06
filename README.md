@@ -1,73 +1,144 @@
 <p align="center">
-  <img src="src-tauri/icons/128x128@2x.png" width="128" alt="Heron icon">
+  <img src="src-tauri/icons/128x128@2x.png" width="112" alt="Heron">
 </p>
 
 <h1 align="center">Heron</h1>
 
 <p align="center">
-  A quiet menu bar / tray app that watches your <b>Claude Code</b> sessions.<br>
-  See how many are running, which one needs you, start or resume a session in any folder.<br>
-  <b>macOS · Windows · Linux. Everything stays on your machine.</b>
+  A quiet menu bar app that watches your <b>Claude Code</b> sessions.<br>
+  How many are running, which one needs you, and one click to start or resume one.
 </p>
 
 <p align="center">
-  <a href="LICENSE">MIT</a> ·
-  Tauri v2 · Rust · Svelte 5 ·
-  ~6 MB ·
-  zero network
+  <b>macOS · Windows · Linux</b> &nbsp;·&nbsp;
+  Tauri v2 + Rust + Svelte 5 &nbsp;·&nbsp;
+  ~4 MB &nbsp;·&nbsp;
+  <a href="LICENSE">MIT</a>
+</p>
+
+<p align="center">
+  <b>No network code. None.</b> Not for telemetry, not for updates, not for anything.
+</p>
+
+<p align="center">
+  <img src="docs/media/popover.png" width="340" alt="The Heron popover listing running and recent Claude Code sessions">
 </p>
 
 ---
 
+## Why
+
+Run more than one Claude Code session and the terminal stops telling you what you
+need to know. Which one is still working? Which one has been sitting on a
+permission prompt for ten minutes while you read something else? Which folder was
+that session in?
+
+Heron answers that from the menu bar, without you going looking.
+
 ## What it does
 
-- **Tray count** — a heron glyph with the number of live Claude Code sessions (menu bar on macOS, system tray on Windows and Linux). It grows a dot when a session is waiting on you.
-- **Session list** — click the icon: running sessions with live status (Working / Idle / Needs you), project folder, git branch, first prompt as the title, and how long ago they were active. Past sessions underneath, ready to resume.
-- **New session** — ⌘N / Ctrl+N, pick a folder, and Heron opens your terminal there with `claude` running. Terminal, iTerm2, Ghostty, Warp, kitty, Alacritty, WezTerm, Windows Terminal, PowerShell, GNOME Terminal and Konsole are supported.
-- **Resume / Focus** — one click resumes a past session (`claude --resume`) or raises the terminal tab of a running one.
-- **The vigil** — a small floating panel pinned to the edge of whichever screen you are on. It shows the count and one line per session, never steals focus, and can be dragged anywhere. Toggle it from the menu bar.
-- **Notifications** — installs Claude Code hooks (with your consent, one click) so you get a native notification when Claude asks for permission, needs input, or finishes its turn. Click it to jump to that terminal.
-- **Light and dark** — OS materials (vibrancy on macOS, Mica on Windows), semantic colours, system fonts. It looks like it shipped with the OS.
+- **A count in the menu bar.** The heron glyph carries the number of live sessions, and grows a dot when one is waiting on you.
+- **A list, one click away.** Running sessions with live status, project folder, git branch, and the first prompt as the title. Past sessions underneath, ready to resume.
+- **Start a session anywhere.** `⌘N`, pick a folder, and your terminal opens there with `claude` running.
+- **Resume or focus.** One click resumes a past session, or raises the terminal tab of a running one.
+- **The vigil.** A small floating panel pinned to the edge of whichever screen you are on. It never steals focus and you can drag it anywhere.
+- **Notifications that mean something.** When Claude asks for permission or finishes a turn, you get a native banner. Click it to jump straight to that terminal.
+
+<p align="center">
+  <img src="docs/media/panel-collapsed.png" width="76" alt="The floating panel, collapsed">
+</p>
 
 ## Privacy
 
-Heron has **no network code**. Not for telemetry, not for updates, not for anything. It reads the files the Claude Code CLI already writes under `~/.claude` (the live session registry, transcripts for titles, prompt history) and writes only to its own app-data folder plus, if you opt in, six hook entries in `~/.claude/settings.json` (backed up first, removed cleanly on uninstall). It never opens the CLI's private `*.key` files, never stores prompt or tool contents, and the hook it installs is a 20-line script you can read. Details in [docs/PRIVACY.md](docs/PRIVACY.md).
+Heron reads the files the Claude Code CLI already writes under `~/.claude`, and
+writes only to its own app-data folder. That is the whole story.
+
+- **No network code exists in this repository.** The webview's content security policy allows nothing but the app's own files. Check it yourself: `grep -rnE "reqwest|hyper|std::net|TcpStream" src-tauri/src`
+- **It never reads `~/.claude/sessions/*.key`**, the CLI's private tokens, or its messaging socket.
+- **It never stores your prompts.** The only prompt-derived text kept anywhere is a session title: the first prompt, truncated to 80 characters. Hook payload fields `tool_input` and `user_input` are discarded at parse time.
+- **Transcripts are read 64 KB at a time**, never in full.
+- **Hooks are opt-in.** Notifications need six hook entries in `~/.claude/settings.json`. Heron adds them only when you click Install, takes a timestamped backup first, and removes exactly what it added on uninstall. The script it installs is 19 lines of `sh` you can read.
+
+Full detail in [docs/PRIVACY.md](docs/PRIVACY.md).
 
 ## Install
 
-Download the bundle for your OS from the [Releases](https://github.com/musaJawad004/heron/releases) page (`.dmg`, `.msi`/`.exe`, `.AppImage`/`.deb`), or build it yourself:
+Grab the installer for your OS from [Releases](https://github.com/musaJawad004/heron/releases), or build it:
 
 ```bash
 git clone https://github.com/musaJawad004/heron.git
 cd heron
 npm install
-npm run tauri build        # → src-tauri/target/release/bundle/
+npm run tauri build     # → src-tauri/target/release/bundle/
 ```
 
-Prerequisites: Node 20+, Rust stable (`rustup`), and the Tauri system deps for your OS ([tauri.app/start/prerequisites](https://v2.tauri.app/start/prerequisites/)). Builds are **unsigned**: no Apple developer account or notarization is involved. On macOS a downloaded copy needs a one-time right-click → Open; a copy you built yourself launches directly.
+You need Node 20+, Rust stable, and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your platform.
 
-Then click the heron in the tray → Settings → Hooks → **Install hooks** to enable notifications. That is the only step that touches `~/.claude/settings.json`.
+Builds are **unsigned**. No Apple developer account, no notarization, nothing uploaded. On macOS a downloaded copy needs one right-click → Open the first time; a copy you built yourself opens normally.
 
-## Build & hack
-
-```bash
-npm run tauri dev                      # dev app with hot reload
-cd src-tauri && cargo test && cargo clippy
-npm run check                          # svelte-check
-```
-
-Rust core in `src-tauri/`, Svelte 5 frontend in `src/`. The layout and the data formats Heron reads are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); the hook payloads in [docs/HOOKS.md](docs/HOOKS.md).
-
-If you use Claude Code to work on Heron, the repo ships a complete `.claude/` setup: rules, hooks (format on edit, refuse to stop on a broken build, guard against touching `~/.claude` data), four agents, a review workflow and sixteen imported Rust/Tauri/Svelte skills. See [CLAUDE.md](CLAUDE.md).
+Then click the heron in the menu bar → Settings → Hooks → **Install hooks** to turn on notifications. That is the only step that touches `~/.claude/settings.json`.
 
 ## How it works
 
-Claude Code writes a small JSON file per running session in `~/.claude/sessions/` with its status. Heron polls that directory, checks that each pid is still alive, and that is the live list. Titles come from the first prompt in each transcript (only the first 64 KB is read). Notifications come from Claude Code hooks: the installed script spools each event as a file into Heron's app-data folder; Heron watches the folder and deletes each file after reading it.
+Claude Code writes a small JSON file per running session into `~/.claude/sessions/`,
+carrying its working directory and whether it is busy, idle or waiting. Heron polls
+that directory once a second and checks each process is genuinely alive, which is
+the live list. Titles come from the first prompt in each transcript.
+
+Notifications come from Claude Code's hooks. The installed script does one thing:
+it copies the event JSON into Heron's own folder. Heron watches that folder,
+reads each file and deletes it.
+
+```
+src-tauri/src/
+  model.rs       shared types, mirrored in src/lib/types.ts
+  state.rs       the hub: polls the registry, watches hooks, publishes a snapshot
+  claude/        reads the CLI's registry, transcripts and history
+  hooks/         installs the receiver, watches the spool, posts notifications
+  launch/        finds claude, opens terminals, focuses a session
+  tray.rs        the menu bar icon and count
+  windows.rs     popover, panel and settings placement
+  placement.rs   pure geometry, unit-tested
+src/
+  routes/{popover,panel,settings}    one route per window
+  lib/api.ts     the only file that talks to Tauri
+```
+
+Two notes for anyone touching window placement, because both cost real debugging:
+
+- macOS lays the desktop out in points but reports each monitor's origin in that
+  monitor's own pixels. On a mixed-DPI desk the physical rectangles **overlap**, so
+  placing by them puts windows on the wrong screen. Everything here is normalised
+  to points first.
+- The tray hands you the icon's rectangle in the pixels of whichever screen's menu
+  bar was clicked, and position alone cannot tell those screens apart. The icon's
+  *height* can, because it matches that screen's menu bar height.
+
+More in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/HOOKS.md](docs/HOOKS.md).
+
+## Develop
+
+```bash
+npm run tauri dev                       # hot reload, tray appears
+cd src-tauri && cargo test && cargo clippy -- -D warnings
+npm run check                           # svelte-check
+```
+
+Open `http://localhost:1420/popover` in a browser and the UI runs on mock data,
+so you can work on it without the app.
+
+If you use Claude Code on this repo, it ships a full `.claude/` setup: rules,
+hooks that format on edit and refuse to end a turn on a broken build, four
+agents, a review workflow, and imported Rust, Tauri and Svelte skills. See
+[CLAUDE.md](CLAUDE.md).
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). The bar for a change is "does this make watching Claude Code sessions simpler or safer".
+See [CONTRIBUTING.md](CONTRIBUTING.md). The bar for a change is "does this make
+watching Claude Code sessions simpler or safer". Two rules are absolute: no
+network code, and nothing that reads `~/.claude/sessions/*.key`.
 
 ## License
 
-[MIT](LICENSE) © Glixen Technologies. Imported Claude Code skills keep their own MIT notices in `.claude/skills/THIRD-PARTY-LICENSES.md`.
+[MIT](LICENSE). Imported Claude Code skills keep their own notices in
+`.claude/skills/THIRD-PARTY-LICENSES.md`.

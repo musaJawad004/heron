@@ -99,26 +99,43 @@ pub fn clamp(x: i32, y: i32, width: u32, height: u32, area: &Rect) -> (i32, i32)
 /// macOS draws a menu bar on every display and reports the icon's rectangle in
 /// that display's own pixels. Displays with different scale factors overlap in
 /// that raw space (a 2x 1512-point built-in covers 0..3024, a 1x external
-/// beside it covers 1512..3432), so the only way back is to try each display:
-/// the right one is where dividing by its own scale lands inside its own
-/// bounds. Menu-bar icons sit at the right end of the bar, so a secondary
-/// display's icon never fits the primary; when the raw numbers do fit more than
-/// one display the primary is the answer.
-pub fn tray_monitor(tray_x: f64, tray_y: f64, monitors: &[MonitorInfo]) -> Option<usize> {
-    let fits: Vec<usize> = monitors
+/// beside it covers 1512..3432), so position alone is ambiguous: an icon at
+/// raw x 2947 sits on the external at 1x and inside the built-in at 2x.
+///
+/// The icon's *height* settles it. A menu-bar item is as tall as the bar, and
+/// each display reports its own bar height in points as the inset between its
+/// bounds and its work area. Dividing the raw height by the right display's
+/// scale lands on that inset; dividing by the wrong one is far off. Measured on
+/// a 2x built-in with a 37-point bar and a 1x external with a 25-point bar:
+///
+/// | icon on   | raw height | ÷2 | ÷1 |
+/// |-----------|-----------|----|----|
+/// | built-in  | 66        | 33 | 66 |
+/// | external  | 30        | 15 | 30 |
+///
+/// So pick the display whose own bar height the converted height is nearest,
+/// among those the converted position actually falls inside.
+pub fn tray_monitor(tray: (f64, f64, f64, f64), monitors: &[MonitorInfo]) -> Option<usize> {
+    let (x, y, _w, h) = tray;
+    let best = monitors
         .iter()
         .enumerate()
-        .filter(|(_, m)| {
+        .filter_map(|(i, m)| {
             let s = if m.device_scale > 0.0 { m.device_scale } else { 1.0 };
-            m.bounds.contains((tray_x / s).round() as i32, (tray_y / s).round() as i32)
+            let (px, py) = ((x / s).round() as i32, (y / s).round() as i32);
+            // The bar sits along the display's top edge, so only the horizontal
+            // span has to contain the icon.
+            if px < m.bounds.x || px >= m.bounds.max_x() {
+                return None;
+            }
+            let bar = (m.work_area.y - m.bounds.y).max(1) as f64;
+            let error = ((h / s) - bar).abs();
+            Some((i, error, py))
         })
-        .map(|(i, _)| i)
-        .collect();
-    match fits.len() {
-        0 => monitors.iter().position(|m| m.is_primary).or(if monitors.is_empty() { None } else { Some(0) }),
-        1 => Some(fits[0]),
-        _ => fits.iter().copied().find(|&i| monitors[i].is_primary).or(Some(fits[0])),
-    }
+        .min_by(|a, b| a.1.total_cmp(&b.1));
+    best.map(|(i, _, _)| i).or_else(|| {
+        monitors.iter().position(|m| m.is_primary).or(if monitors.is_empty() { None } else { Some(0) })
+    })
 }
 
 /// The monitor placements default to: under the cursor, else the primary,
@@ -458,28 +475,29 @@ mod tests {
         vec![built_in, external]
     }
 
+    // Both rectangles below were logged from the real machine this was
+    // written on: a 2x built-in with a 37-point menu bar beside a 1x external
+    // with a 25-point one.
+
     #[test]
     fn tray_on_the_built_in_menu_bar_resolves_to_the_built_in() {
         let m = mixed_dpi();
-        // Right end of the 2x built-in's menu bar: 1476 points -> 2952 pixels.
-        // Those raw numbers also fit the external's 1512..3432, so the tie has
-        // to break towards the primary.
-        assert_eq!(tray_monitor(2952.0, 12.0, &m), Some(0));
+        assert_eq!(tray_monitor((2054.0, 0.0, 98.0, 66.0), &m), Some(0));
     }
 
     #[test]
     fn tray_on_the_external_menu_bar_resolves_to_the_external() {
+        // x 2947 is inside the external at 1x and also inside the built-in
+        // once halved, so only the height tells them apart.
         let m = mixed_dpi();
-        // Right end of the 1x external's bar: 3300 points and pixels alike.
-        // Halving it lands at 1650, outside the built-in, so there is no tie.
-        assert_eq!(tray_monitor(3300.0, 8.0, &m), Some(1));
+        assert_eq!(tray_monitor((2947.0, 0.0, 49.0, 30.0), &m), Some(1));
     }
 
     #[test]
     fn tray_off_every_display_falls_back_to_the_primary() {
         let m = mixed_dpi();
-        assert_eq!(tray_monitor(99_000.0, 99_000.0, &m), Some(0));
-        assert_eq!(tray_monitor(0.0, 0.0, &[]), None);
+        assert_eq!(tray_monitor((99_000.0, 0.0, 49.0, 30.0), &m), Some(0));
+        assert_eq!(tray_monitor((0.0, 0.0, 49.0, 30.0), &[]), None);
     }
 
     #[test]

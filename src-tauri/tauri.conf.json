@@ -98,7 +98,22 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "minimumSystemVersion": "12.0"
+      "minimumSystemVersion": "12.0",
+      "dmg": {
+        "background": "dmg/background.png",
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 196
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 196
+        }
+      }
     },
     "windows": {
       "nsis": {
