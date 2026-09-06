@@ -1541,8 +1541,10 @@ name = "heron"
 version = "0.1.0"
 dependencies = [
  "dirs 6.0.0",
+ "image",
  "log",
  "notify",
+ "objc2-app-kit",
  "parking_lot",
  "serde",
  "serde_json",
