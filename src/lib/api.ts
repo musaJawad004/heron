@@ -74,6 +74,7 @@ export const api = {
   togglePanel: () => invoke<void>('toggle_panel'),
   openSettings: () => invoke<void>('open_settings'),
   panelResized: (width: number, height: number) => invoke<void>('panel_resized', { width, height }),
+  popoverResized: (height: number) => invoke<void>('popover_resized', { height }),
   panelMoved: () => invoke<void>('panel_moved'),
   openUrl: (url: string) => invoke<void>('open_url', { url }),
   quit: () => invoke<void>('quit'),
