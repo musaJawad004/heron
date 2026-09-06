@@ -4,7 +4,7 @@ Thanks for helping. Heron is small on purpose; the bar for a change is "does
 this make watching Claude Code sessions simpler or safer".
 
 1. Fork, branch from `main`, keep commits focused.
-2. `cargo test`, `cargo clippy`, `npm run check` must pass; `npm run tauri dev`
+2. `cargo test`, `cargo clippy`, `yarn run check` must pass; `yarn tauri dev`
    must show the tray.
 3. Follow `.claude/rules/` (they are short). In particular: **no network code,
    ever**, and nothing that reads `~/.claude/sessions/*.key`.

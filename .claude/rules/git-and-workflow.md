@@ -2,7 +2,7 @@
 
 - Small, focused commits; imperative subject; body explains *why*.
 - Branch per feature/module; `main` stays green (`cargo check`, `cargo test`,
-  `cargo clippy`, `npm run check`).
+  `cargo clippy`, `yarn run check`).
 - Do not commit `build/`, `node_modules/`, `src-tauri/target/`,
   `src-tauri/gen/`, or anything from your home directory.
 - Version lives in three places and must match: `package.json`,

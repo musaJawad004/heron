@@ -6,7 +6,7 @@ model: sonnet
 ---
 You verify Heron on the real machine. Follow `.claude/rules/testing-and-verification.md`.
 
-Steps: `pkill -x heron; (npm run tauri dev > /tmp/heron-dev.log 2>&1 &)`; wait
+Steps: `pkill -x heron; (yarn tauri dev > /tmp/heron-dev.log 2>&1 &)`; wait
 until the log says the app is running (~60 s on a cold cache); read
 `ls ~/.claude/sessions/*.json` for the expected running count; if you need a
 throwaway session start one with

@@ -75,8 +75,8 @@ Grab the installer for your OS from [Releases](https://github.com/musaJawad004/h
 ```bash
 git clone https://github.com/musaJawad004/heron.git
 cd heron
-npm install
-npm run tauri build     # → src-tauri/target/release/bundle/
+yarn install
+yarn tauri build     # → src-tauri/target/release/bundle/
 ```
 
 You need Node 20+, Rust stable, and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your platform.
@@ -126,9 +126,9 @@ More in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/HOOKS.md](docs/HO
 ## Develop
 
 ```bash
-npm run tauri dev                       # hot reload, tray appears
+yarn tauri dev                       # hot reload, tray appears
 cd src-tauri && cargo test && cargo clippy -- -D warnings
-npm run check                           # svelte-check
+yarn run check                           # svelte-check
 ```
 
 Open `http://localhost:1420/popover` in a browser and the UI runs on mock data,
@@ -162,6 +162,21 @@ backup, and Uninstall removes exactly those.
 
 **Can I use it with several sessions at once?** That is the point. The menu bar
 count and the floating panel are both built for running many sessions in parallel.
+
+## Security
+
+Two scanners run in CI on every push, and daily on a schedule, because a
+dependency can be poisoned long after it is merged:
+
+```bash
+scripts/scan-supply-chain.py    # this repo, working tree and every remote branch
+scripts/scan-machine.py ~       # any folder on your machine, git or not
+```
+
+They look for known dropper signatures, for fonts whose bytes are not fonts,
+and for something specific to this project: **any network code at all**. Heron
+promises it has none, so a patch or dependency that adds an HTTP client fails
+the build exactly like malware would.
 
 ## Contributing
 

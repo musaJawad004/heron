@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: yarn
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -30,9 +30,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-      - run: npm ci
-      - run: npm run check
-      - run: npx prettier --check src
+      - run: yarn install --frozen-lockfile
+      - run: yarn run check
+      - run: yarn prettier --check src
       - run: cargo fmt --check
         working-directory: src-tauri
       - run: cargo clippy -- -D warnings

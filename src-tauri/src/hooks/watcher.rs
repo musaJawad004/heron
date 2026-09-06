@@ -38,6 +38,14 @@ const MESSAGE_CHARS: usize = 200;
 const SUBTYPE_CHARS: usize = 64;
 /// A `.tmp` older than this was abandoned by a killed hook process.
 const STALE_TMP: Duration = Duration::from_secs(60);
+/// Spool files older than this are deleted unread.
+///
+/// The hook keeps firing while Heron is not running, and what it spools is the
+/// CLI's raw payload, prompt text included. Heron drops that text the moment it
+/// parses a file, but an unread file would otherwise sit on disk forever. An
+/// event this old is useless anyway: nobody needs to hear that a permission
+/// prompt appeared an hour ago.
+const STALE_EVENT: Duration = Duration::from_secs(10 * 60);
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
@@ -169,7 +177,14 @@ impl Worker {
             }
             let path = entry.path();
             match path.extension().and_then(|e| e.to_str()) {
-                Some("json") if !self.skip.contains(&entry.file_name()) => files.push(path),
+                Some("json") if !self.skip.contains(&entry.file_name()) => {
+                    if older_than(&path, STALE_EVENT) {
+                        log::debug!("discarding a hook event that went unread");
+                        let _ = fs::remove_file(&path);
+                    } else {
+                        files.push(path);
+                    }
+                }
                 Some("tmp") => reap_stale_tmp(&path),
                 _ => {}
             }
@@ -221,13 +236,16 @@ fn read_event(path: &Path) -> Option<HookEvent> {
     }
 }
 
-fn reap_stale_tmp(path: &Path) {
-    let stale = fs::metadata(path)
+fn older_than(path: &Path, limit: Duration) -> bool {
+    fs::metadata(path)
         .and_then(|m| m.modified())
         .ok()
         .and_then(|t| SystemTime::now().duration_since(t).ok())
-        .is_some_and(|age| age > STALE_TMP);
-    if stale {
+        .is_some_and(|age| age > limit)
+}
+
+fn reap_stale_tmp(path: &Path) {
+    if older_than(path, STALE_TMP) {
         let _ = fs::remove_file(path);
     }
 }
@@ -471,5 +489,28 @@ mod tests {
         spool(&events, "1700000001-1.json", br#"{"session_id":"polled","hook_event_name":"Stop"}"#);
         assert!(wait_until(Duration::from_secs(2), || seen.lock().len() == 1));
         watcher.stop();
+    }
+
+    #[test]
+    fn an_unread_event_older_than_the_window_is_discarded_not_parsed() {
+        let dir = tempfile::tempdir().unwrap();
+        let (tx, rx) = std::sync::mpsc::channel();
+        spool(dir.path(), "1-1.json", br#"{"hook_event_name":"Stop","session_id":"s"}"#);
+        let old = dir.path().join("1-1.json");
+        // Backdate it past the window: the hook fires while Heron is not
+        // running, and what it leaves behind is the CLI's raw payload.
+        let stale = SystemTime::now() - STALE_EVENT - Duration::from_secs(30);
+        filetime::set_file_mtime(&old, filetime::FileTime::from_system_time(stale)).unwrap();
+        spool(dir.path(), "2-2.json", br#"{"hook_event_name":"Stop","session_id":"fresh"}"#);
+
+        let _w = HookWatcher::start(dir.path().to_path_buf(), move |e| {
+            let _ = tx.send(e);
+        })
+        .unwrap();
+
+        let got = rx.recv_timeout(Duration::from_secs(3)).expect("the fresh event");
+        assert_eq!(got.session_id, "fresh");
+        assert!(rx.recv_timeout(Duration::from_millis(300)).is_err(), "the stale one is not parsed");
+        assert!(!old.exists(), "and it is deleted");
     }
 }

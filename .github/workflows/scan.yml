@@ -1,0 +1,23 @@
+name: Supply chain scan
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # A dependency can be poisoned long after it is merged, so re-check daily.
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Every branch, so a payload pushed to a side branch is caught too.
+          fetch-depth: 0
+      - name: Scan for injected payloads and network code
+        run: python3 scripts/scan-supply-chain.py

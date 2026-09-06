@@ -15,12 +15,12 @@ Windows 10/11, Linux. Unsigned local builds; no Apple developer identity needed.
 ## Commands
 
 ```bash
-npm install                       # once
-npm run tauri dev                 # dev app with hot reload (tray appears)
+yarn install                       # once
+yarn tauri dev                 # dev app with hot reload (tray appears)
 cd src-tauri && cargo check && cargo test && cargo clippy && cargo fmt
-npm run check                     # svelte-check (strict TS)
-npx prettier -w src               # format frontend
-npm run tauri build               # release bundle → src-tauri/target/release/bundle/
+yarn run check                     # svelte-check (strict TS)
+yarn prettier -w src               # format frontend
+yarn tauri build               # release bundle → src-tauri/target/release/bundle/
 ```
 
 ## Layout
@@ -84,6 +84,6 @@ prettier. Stop → refuses to end the turn while `cargo check` or `svelte-check`
 
 ## Verifying for real
 
-`npm run tauri dev`, run `claude` in a terminal folder → it shows in the
+`yarn tauri dev`, run `claude` in a terminal folder → it shows in the
 popover within 2 s; quit → gone within 2 s. Install hooks from Settings →
 Hooks, then trigger a permission prompt in a session → notification.

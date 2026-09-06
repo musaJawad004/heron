@@ -138,6 +138,9 @@ impl HookInstaller {
             log::info!("removed Heron hooks from {}", self.settings_file.display());
         }
         self.remove_script()?;
+        // The hook is gone, so anything still spooled will never be read. It is
+        // the CLI's raw payload, so remove it rather than leave it on disk.
+        let _ = fs::remove_dir_all(&self.events_dir);
         Ok(())
     }
 
@@ -611,7 +614,9 @@ mod tests {
         assert_eq!(read_json(&i.settings_file), original);
         assert!(!i.script_path.exists());
         assert!(!i.script_path.parent().unwrap().exists(), "empty bin/ removed");
-        assert!(i.events_dir.is_dir(), "events dir left alone");
+        // Nothing can read the spool once the hook is gone, and what it holds
+        // is the CLI's raw payload, so it goes with it.
+        assert!(!i.events_dir.exists(), "spool removed with the hook");
         assert_eq!(i.backups().len(), 2);
         assert_eq!(i.status(), HookStatus::NotInstalled);
     }

@@ -18,7 +18,7 @@ cargo check failed:
 $(printf '%s\n' "$out" | grep -E '^(error|warning: unused)' -A 6 | head -40)"; fi
 fi
 if [ ! -f "$stamp" ] || [ -n "$(find src svelte.config.js vite.config.ts tsconfig.json -newer "$stamp" 2>/dev/null | head -1)" ]; then
-  out=$(npm run -s check 2>&1)
+  out=$(yarn run -s check 2>&1)
   if printf '%s' "$out" | grep -Eq '[1-9][0-9]* ERRORS|Error:'; then fail=1; msg="$msg
 svelte-check failed:
 $(printf '%s\n' "$out" | grep -E 'Error|ERROR' -A 3 | head -40)"; fi

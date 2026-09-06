@@ -10,11 +10,11 @@ local use; release bundles are unsigned unless you add your own keys.
 
 | Task | Command |
 |---|---|
-| Dev loop (hot reload, tray appears) | `npm run tauri dev` |
+| Dev loop (hot reload, tray appears) | `yarn tauri dev` |
 | Rust type-check / tests / lint | `cd src-tauri && cargo check && cargo test && cargo clippy` |
-| Frontend type-check | `npm run check` |
-| Format | `cd src-tauri && cargo fmt` · `npx prettier -w src` |
-| Release bundle for this OS | `npm run tauri build` → `src-tauri/target/release/bundle/` |
+| Frontend type-check | `yarn run check` |
+| Format | `cd src-tauri && cargo fmt` · `yarn prettier -w src` |
+| Release bundle for this OS | `yarn tauri build` → `src-tauri/target/release/bundle/` |
 | macOS logs | `log stream --predicate 'process == "heron"' --style compact` or the log file under `~/Library/Logs/com.muhammadmusadev.heron/` |
 | Windows/Linux logs | `%APPDATA%\com.muhammadmusadev.heron\logs\` / `~/.local/share/com.muhammadmusadev.heron/logs/` |
 
@@ -27,7 +27,7 @@ Gotchas
   (`Cmd+Opt+I` in dev) or it will vanish when you click elsewhere.
 - The panel window is `focusable: false`; buttons inside still get clicks,
   but inputs never get keyboard focus by design.
-- Windows: `npm run tauri build` needs the MSVC toolchain and WebView2 (preinstalled on Win 11).
+- Windows: `yarn tauri build` needs the MSVC toolchain and WebView2 (preinstalled on Win 11).
 - Linux: needs `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev` for tray + bundling.
 - If a stale `heron` dev process is running, the single-instance plugin just
   raises it; kill it first when testing startup paths.

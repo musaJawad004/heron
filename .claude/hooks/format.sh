@@ -11,6 +11,6 @@ case "$file" in
   *.rs) rustfmt --edition 2021 --config-path "$root/src-tauri/rustfmt.toml" "$file" >/dev/null 2>&1 ;;
   *.svelte|*.ts|*.js|*.css|*.json|*.md)
     case "$file" in */node_modules/*|*/build/*|*/.svelte-kit/*|*/target/*) exit 0 ;; esac
-    (cd "$root" && npx --no-install prettier --log-level silent -w "$file" >/dev/null 2>&1) ;;
+    (cd "$root" && yarn prettier --log-level silent -w "$file" >/dev/null 2>&1) ;;
 esac
 exit 0

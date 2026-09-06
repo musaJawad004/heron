@@ -12,5 +12,5 @@ For the component(s) you are given: put spacing on the grid, replace any
 hard-coded colour with a token, sharpen the type hierarchy, make hover and
 keyboard focus visible (`:focus-visible`), write empty/error states, respect
 `prefers-reduced-motion`, and keep components small (split over ~120 lines).
-Do not change behaviour or the `api.ts` surface. Run `npm run check` after
-every change and `npx prettier -w` on touched files.
+Do not change behaviour or the `api.ts` surface. Run `yarn run check` after
+every change and `yarn prettier -w` on touched files.
