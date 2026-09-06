@@ -20,7 +20,7 @@
 use crate::model::{now_ms, HookEvent, HookEventKind, Session};
 use crate::settings::Settings;
 use parking_lot::Mutex;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tauri_plugin_notification::NotificationExt;
 
 /// The system's default notification sound, in the name each backend expects
@@ -49,6 +49,11 @@ pub fn post(app: &AppHandle, event: &HookEvent, session: Option<&Session>, setti
         log::debug!("suppressing duplicate notification for session {}", event.session_id);
         return;
     }
+    // Prefer the clickable path; it is only available from a real bundle.
+    #[cfg(target_os = "macos")]
+    if post_clickable(app, event.session_id.clone(), &text, settings.play_sound) {
+        return;
+    }
     let mut builder = app.notification().builder().title(&text.title).body(&text.body);
     if settings.play_sound {
         builder = builder.sound(DEFAULT_SOUND);
@@ -56,6 +61,57 @@ pub fn post(app: &AppHandle, event: &HookEvent, session: Option<&Session>, setti
     if let Err(e) = builder.show() {
         log::warn!("could not show notification: {e}");
     }
+}
+
+/// Deliver the banner ourselves so a click can be answered by focusing the
+/// session's terminal. `tauri-plugin-notification` throws the response away,
+/// and in a dev build it also attributes banners to Terminal.app, so this path
+/// is what gives them Heron's own icon and name.
+///
+/// Returns false when the notification could not be delivered this way (an
+/// unbundled binary, or the notification centre refusing), so the caller can
+/// fall back to the plugin.
+#[cfg(target_os = "macos")]
+fn post_clickable(app: &AppHandle, session_id: String, text: &Text, play_sound: bool) -> bool {
+    use mac_notification_sys::{MainButton, Notification, NotificationResponse};
+    use std::sync::OnceLock;
+
+    // `set_application` needs a real bundle; remember whether it took.
+    static READY: OnceLock<bool> = OnceLock::new();
+    let ready = *READY.get_or_init(|| {
+        let id = app.config().identifier.clone();
+        match mac_notification_sys::set_application(&id) {
+            Ok(()) => true,
+            Err(e) => {
+                log::info!("notifications fall back to the plugin ({id} is not a bundle here): {e}");
+                false
+            }
+        }
+    });
+    if !ready {
+        return false;
+    }
+
+    let (title, body) = (text.title.clone(), text.body.clone());
+    let handle = app.clone();
+    // `send` blocks until the banner is dismissed or clicked, so it gets a
+    // thread of its own. A few concurrent banners is the realistic ceiling.
+    let spawned = std::thread::Builder::new().name("heron-notify".into()).spawn(move || {
+        let mut n = Notification::new();
+        n.title(&title).message(&body).main_button(MainButton::SingleAction("Focus"));
+        if play_sound {
+            n.sound(DEFAULT_SOUND);
+        }
+        match n.send() {
+            Ok(NotificationResponse::Click) | Ok(NotificationResponse::ActionButton(_)) => {
+                let state = handle.state::<crate::state::AppState>();
+                state.focus(&handle, &session_id);
+            }
+            Ok(_) => {}
+            Err(e) => log::warn!("could not show notification: {e}"),
+        }
+    });
+    spawned.is_ok()
 }
 
 /// A sample notification for the Settings → Notifications "Send test" button.

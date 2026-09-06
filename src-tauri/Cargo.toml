@@ -39,6 +39,11 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 # Panel window level / collection behaviour (above full-screen apps). Already in
 # the tree through tauri; we enable only the NSWindow surface.
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSResponder", "NSWindow"] }
+# Sent directly (rather than through tauri-plugin-notification) only so a click
+# on the banner can be answered: the plugin drops the response. Already in the
+# tree as a transitive dependency of that plugin.
+mac-notification-sys = "0.6"
+
 
 [dev-dependencies]
 tempfile = "3"
