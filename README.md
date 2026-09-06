@@ -11,6 +11,16 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/musaJawad004/heron/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/musaJawad004/heron?style=flat-square&color=111111&labelColor=eaeaea"></a>
+  <a href="https://github.com/musaJawad004/heron/actions/workflows/ci.yml"><img alt="CI on macOS, Windows and Linux" src="https://img.shields.io/github/actions/workflow/status/musaJawad004/heron/ci.yml?style=flat-square&label=macOS%20%C2%B7%20Windows%20%C2%B7%20Linux&color=111111&labelColor=eaeaea"></a>
+  <a href="https://github.com/musaJawad004/heron/actions/workflows/scan.yml"><img alt="Supply chain scan" src="https://img.shields.io/github/actions/workflow/status/musaJawad004/heron/scan.yml?style=flat-square&label=no%20network%20code&color=111111&labelColor=eaeaea"></a>
+  <a href="https://github.com/musaJawad004/heron/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/musaJawad004/heron/total?style=flat-square&color=111111&labelColor=eaeaea"></a>
+  <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/license-MIT-111111?style=flat-square&labelColor=eaeaea"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/musaJawad004/heron/releases/latest"><b>Download</b></a>
+  &nbsp;·&nbsp;
   <a href="https://musajawad004.github.io/heron/"><b>musajawad004.github.io/heron</b></a>
 </p>
 
@@ -91,7 +101,16 @@ You need Node 20+, Rust stable, and the [Tauri prerequisites](https://v2.tauri.a
 
 Builds are **unsigned**. No Apple developer account, no notarization, nothing uploaded. On macOS a downloaded copy needs one right-click → Open the first time; a copy you built yourself opens normally.
 
-Then click the heron in the menu bar → Settings → Hooks → **Install hooks** to turn on notifications. That is the only step that touches `~/.claude/settings.json`.
+### First launch
+
+Builds are unsigned, so both systems warn once. That is the cost of not paying
+for a developer account, not a sign of anything wrong, and you can always build
+it yourself from source.
+
+- **macOS**: right-click the app, then **Open**, and confirm. First time only.
+- **Windows**: at the SmartScreen prompt, choose **More info**, then **Run anyway**.
+
+Then click the heron in the menu bar → Settings → Hooks → **Install hooks** to turn on notifications. That is the only step that touches `~/.claude/settings.json`. It takes a timestamped backup first, and Uninstall removes exactly what it added.
 
 ## How it works
 
