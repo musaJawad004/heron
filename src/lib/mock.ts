@@ -1,0 +1,136 @@
+// Fake data for running the pages in a plain browser (npm run dev, then open
+// http://localhost:1420/popover?mock). Never used inside Tauri.
+import type { HookEvent, Session, Snapshot } from './types';
+
+const now = Date.now();
+
+const attention: HookEvent = {
+  id: 'evt-1',
+  kind: 'Notification',
+  sessionId: 'c1',
+  cwd: '/Users/me/dev/civl-mobile-app',
+  transcriptPath: null,
+  subtype: 'permission_prompt',
+  message: 'Claude needs your permission to use Bash',
+  toolName: 'Bash',
+  receivedAt: now - 40_000,
+};
+
+const session = (p: Partial<Session> & { id: string; cwd: string }): Session => ({
+  name: null,
+  title: null,
+  pid: null,
+  status: 'unknown',
+  startedAt: null,
+  lastActiveAt: now - 60_000,
+  version: '2.1.263',
+  gitBranch: 'main',
+  transcriptPath: null,
+  tty: null,
+  attention: null,
+  ...p,
+});
+
+export const mockSnapshot: Snapshot = {
+  running: [
+    session({
+      id: 'c1',
+      name: 'civl-mobile-app-1b',
+      title: 'Build the swipeable video player for the news feed',
+      cwd: '/Users/me/dev/civl-mobile-app',
+      pid: 3412,
+      status: 'needs_input',
+      startedAt: now - 3_600_000,
+      lastActiveAt: now - 40_000,
+      gitBranch: 'feat/video-player',
+      tty: 'ttys000',
+      attention,
+    }),
+    session({
+      id: 'c2',
+      name: 'heron-64',
+      title: 'Switch the app to Tauri v2 and keep the design minimal',
+      cwd: '/Users/me/Projects/heron',
+      pid: 2831,
+      status: 'busy',
+      startedAt: now - 1_500_000,
+      lastActiveAt: now - 2_000,
+      tty: 'ttys003',
+    }),
+    session({
+      id: 'c3',
+      name: 'serene-2a',
+      title: 'Investigate the obfuscated dropper payload in the font files',
+      cwd: '/Users/me/dev/serene',
+      pid: 4101,
+      status: 'idle',
+      startedAt: now - 300_000,
+      lastActiveAt: now - 120_000,
+      gitBranch: 'main',
+    }),
+  ],
+  recent: [
+    session({
+      id: 'r1',
+      title: 'Add dark mode to the settings screen',
+      cwd: '/Users/me/dev/bioniks',
+      lastActiveAt: now - 7_200_000,
+    }),
+    session({
+      id: 'r2',
+      title: 'Fix flaky upload test on CI',
+      cwd: '/Users/me/dev/bioniks/vhot',
+      lastActiveAt: now - 86_400_000,
+    }),
+    session({
+      id: 'r3',
+      title: 'SOD - Sun, 6 Sep: video player work from the message yesterday',
+      cwd: '/Users/me/dev/civl-mobile-app',
+      lastActiveAt: now - 90_000_000,
+    }),
+    session({ id: 'r4', title: null, cwd: '/Users/me', lastActiveAt: now - 172_800_000 }),
+    session({
+      id: 'r5',
+      title: 'Write the privacy document',
+      cwd: '/Users/me/Projects/heron',
+      lastActiveAt: now - 259_200_000,
+    }),
+  ],
+  attention: { c1: attention },
+  eventLog: [
+    attention,
+    {
+      ...attention,
+      id: 'evt-0',
+      kind: 'Stop',
+      sessionId: 'c2',
+      subtype: null,
+      message: null,
+      toolName: null,
+      receivedAt: now - 300_000,
+    },
+  ],
+  hookStatus: 'installed',
+  claudePath: '/Users/me/.local/bin/claude',
+  lastError: null,
+  isRefreshingHistory: false,
+  settings: {
+    terminalApp: null,
+    claudePath: '',
+    extraClaudeArgs: '',
+    defaultProjectsFolder: '',
+    showPanel: true,
+    panelEdge: 'left',
+    panelFollowsActiveScreen: true,
+    panelOpacity: 1,
+    panelExpanded: true,
+    panelOrigin: null,
+    notifyOnPermission: true,
+    notifyOnDone: true,
+    notifyOnIdle: false,
+    playSound: true,
+    recentLimit: 20,
+    showCountInTray: true,
+    launchAtLogin: false,
+  },
+};

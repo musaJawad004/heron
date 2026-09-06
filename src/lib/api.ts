@@ -1,8 +1,44 @@
 // The only file that talks to Tauri. Every backend command is wrapped here so
 // components stay testable and the IPC surface is visible in one place.
-import { invoke } from '@tauri-apps/api/core';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { invoke as tauriInvoke } from '@tauri-apps/api/core';
+import { listen as tauriListen, type UnlistenFn } from '@tauri-apps/api/event';
 import type { HookEvent, Session, Settings, Snapshot, TerminalChoice } from './types';
+import { mockSnapshot } from './mock';
+
+/** True when the page runs inside the Tauri webview (not a plain browser). */
+export const inTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
+// Outside Tauri (plain `npm run dev` in a browser) every command resolves to
+// mock data so the UI can be developed and screenshotted without the app.
+async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  if (inTauri) return tauriInvoke<T>(cmd, args);
+  console.debug('[mock invoke]', cmd, args);
+  switch (cmd) {
+    case 'get_snapshot':
+      return mockSnapshot as T;
+    case 'get_settings':
+      return mockSnapshot.settings as T;
+    case 'update_settings':
+      Object.assign(mockSnapshot.settings, (args?.patch as object) ?? {});
+      return mockSnapshot.settings as T;
+    case 'installed_terminals':
+      return [
+        { id: 'terminal', name: 'Terminal' },
+        { id: 'iterm', name: 'iTerm2' },
+      ] as T;
+    case 'detect_claude':
+      return '/Users/me/.local/bin/claude' as T;
+    case 'pick_folder':
+      return '/Users/me/dev/example' as T;
+    default:
+      return undefined as T;
+  }
+}
+
+async function listen<T>(event: string, cb: (e: { payload: T }) => void): Promise<UnlistenFn> {
+  if (inTauri) return tauriListen<T>(event, cb);
+  return () => {};
+}
 
 export const api = {
   // State
