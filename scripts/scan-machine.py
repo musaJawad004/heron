@@ -58,6 +58,11 @@ FONT_MAGIC = {
 
 MAX_BYTES = 8 * 1024 * 1024  # a dropper is one long line, not a huge asset
 
+# Any copy of one of these scanners quotes the signatures verbatim and so
+# matches itself. Match on the file name, since copies live in several repos.
+SELF_NAMES = {"scan-supply-chain.py", "scan-machine.py", "malware_scan.py",
+              "malware_scan_fs.py", "security_scan.py"}
+
 
 def font_mismatch(path, data):
     expected = FONT_MAGIC.get(os.path.splitext(path)[1].lower())
@@ -67,6 +72,8 @@ def font_mismatch(path, data):
 
 
 def scan_file(path):
+    if os.path.basename(path) in SELF_NAMES:
+        return []
     try:
         size = os.path.getsize(path)
         if size == 0 or size > MAX_BYTES:

@@ -80,6 +80,11 @@ NETWORK_EXEMPT = (
     "CLAUDE.md", "CONTRIBUTING.md",
 )
 
+# These two files quote the signatures above verbatim, so they match
+# themselves. Their contents are reviewable in the repository like any other
+# source file; skipping them here is what keeps the signal honest.
+SELF = ("scripts/scan-supply-chain.py", "scripts/scan-machine.py")
+
 FONT_MAGIC = {
     ".woff": (b"wOFF",),
     ".woff2": (b"wOF2",),
@@ -108,7 +113,8 @@ def scan_path(path, data, check_network=True):
     if b"\0" in data[:4096]:
         return hits
     text = data.decode("utf-8", errors="ignore")
-    hits += [name for pat, name in MALWARE if re.search(pat, text)]
+    if path not in SELF:
+        hits += [name for pat, name in MALWARE if re.search(pat, text)]
     if not check_network or any(path.startswith(e) or e in path for e in NETWORK_EXEMPT):
         return hits
     if is_test(path, text):
