@@ -11,6 +11,10 @@
 </p>
 
 <p align="center">
+  <a href="https://musajawad004.github.io/heron/"><b>musajawad004.github.io/heron</b></a>
+</p>
+
+<p align="center">
   <b>macOS · Windows · Linux</b> &nbsp;·&nbsp;
   Tauri v2 + Rust + Svelte 5 &nbsp;·&nbsp;
   ~4 MB &nbsp;·&nbsp;

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<script>document.documentElement.className = "js";</script>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heron — Claude Code session manager for the menu bar</title>
+<meta name="description" content="Heron is a free, open-source menu bar app that watches your Claude Code CLI sessions. See which are running, which needs permission, and start or resume one in a click. macOS, Windows, Linux. No network, no telemetry, no account.">
+<link rel="canonical" href="https://musajawad004.github.io/heron/">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Muhammad Musa">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Heron">
+<meta property="og:title" content="Heron — Claude Code session manager for the menu bar">
+<meta property="og:description" content="Watch every Claude Code session from your menu bar. Know which one needs permission. Local only: no network, no telemetry.">
+<meta property="og:url" content="https://musajawad004.github.io/heron/">
+<meta property="og:image" content="https://musajawad004.github.io/heron/demo.gif">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Heron — Claude Code session manager for the menu bar">
+<meta name="twitter:description" content="Watch every Claude Code session from your menu bar. Local only: no network, no telemetry.">
+<meta name="twitter:image" content="https://musajawad004.github.io/heron/demo.gif">
+<link rel="icon" href="icon.png" type="image/png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Heron",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS 12+, Windows 10/11, Linux",
+  "description": "A menu bar and system tray app that monitors Claude Code CLI sessions: which are running, which needs permission, and one click to start, resume or focus one. Local only, with no network access.",
+  "url": "https://musajawad004.github.io/heron/",
+  "downloadUrl": "https://github.com/musaJawad004/heron/releases",
+  "softwareVersion": "0.1.0",
+  "license": "https://opensource.org/licenses/MIT",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Muhammad Musa" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Does Heron send my Claude Code prompts anywhere?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. There is no network code in the repository at all. The only prompt-derived text it stores is a session title truncated to 80 characters." } },
+    { "@type": "Question", "name": "Does it need an API key or a Claude account?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. Heron never contacts Anthropic. It reads the files the Claude Code CLI already writes on your disk." } },
+    { "@type": "Question", "name": "Does Heron work with Claude Code on Windows?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. It reads %USERPROFILE%\\.claude and registers its hooks through PowerShell, and the tray icon carries the session count." } },
+    { "@type": "Question", "name": "Will it slow Claude Code down?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. The hook it installs writes one small file and exits. It is registered as asynchronous with a five second timeout and can never block a session." } }
+  ]
+}
+</script>
+
+<style>
+  :root {
+    --canvas: #fbfbfa;
+    --surface: #ffffff;
+    --line: #eaeaea;
+    --ink: #1a1a19;
+    --ink-soft: #55534e;
+    --ink-mute: #787774;
+    --pale-green: #edf3ec; --pale-green-ink: #346538;
+    --pale-blue:  #e1f3fe; --pale-blue-ink:  #1f6c9f;
+    --pale-yellow:#fbf3db; --pale-yellow-ink:#956400;
+    --serif: "Instrument Serif", "Newsreader", "Playfair Display", Georgia, serif;
+    --sans: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", system-ui, sans-serif;
+    --mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--canvas); color: var(--ink);
+    font-family: var(--sans); font-size: 16px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; }
+  /* A single very slow warm light, so sections are not flat. */
+  .ambient { position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(38% 30% at 78% 12%, #d9c9a8 0%, rgba(217,201,168,0) 70%);
+    opacity: .05; animation: drift 26s ease-in-out infinite alternate; }
+  @keyframes drift { to { transform: translate3d(-4%, 3%, 0) scale(1.06); } }
+  main { position: relative; z-index: 1; }
+
+  nav { border-bottom: 1px solid var(--line); background: rgba(251,251,250,.8);
+        backdrop-filter: saturate(160%) blur(12px); position: sticky; top: 0; z-index: 5; }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -.01em; }
+  .brand svg { width: 22px; height: 22px; }
+  .navlinks { display: flex; gap: 26px; font-size: 14px; color: var(--ink-soft); }
+  .navlinks a { text-decoration: none; }
+  .navlinks a:hover { color: var(--ink); }
+
+  header { padding: 104px 0 72px; }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(44px, 6.4vw, 76px);
+       line-height: 1.06; letter-spacing: -.03em; margin: 0 0 22px; max-width: 15ch; }
+  .lede { font-size: 19px; color: var(--ink-soft); max-width: 56ch; margin: 0 0 34px; }
+  .cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .btn { display: inline-block; background: #111; color: #fff; text-decoration: none;
+         padding: 12px 22px; border-radius: 6px; font-size: 15px; font-weight: 500;
+         border: 1px solid #111; transition: background 200ms, transform 120ms; }
+  .btn:hover { background: #333; }
+  .btn:active { transform: scale(.98); }
+  .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  .btn.ghost:hover { background: #f4f4f2; }
+  .meta { font-family: var(--mono); font-size: 12.5px; color: var(--ink-mute); margin-top: 18px; }
+
+  .shot { margin: 56px 0 0; border: 1px solid var(--line); border-radius: 12px;
+          background: var(--surface); overflow: hidden; }
+  .chrome { display: flex; gap: 7px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .chrome i { width: 10px; height: 10px; border-radius: 50%; background: #e2e2df; display: block; }
+  .shot img { display: block; width: 100%; height: auto; }
+
+  section { padding: 88px 0; border-top: 1px solid var(--line); }
+  h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(30px, 3.6vw, 42px);
+       letter-spacing: -.025em; line-height: 1.12; margin: 0 0 14px; }
+  .sub { color: var(--ink-soft); max-width: 62ch; margin: 0 0 40px; }
+
+  .bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+  .card { border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+          padding: 28px; transition: box-shadow 200ms; }
+  .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+  .card h3 { font-size: 16px; font-weight: 600; margin: 14px 0 8px; letter-spacing: -.01em; }
+  .card p { margin: 0; color: var(--ink-soft); font-size: 15px; }
+  .span3 { grid-column: span 3; } .span2 { grid-column: span 2; } .span6 { grid-column: span 6; }
+  .card svg { width: 20px; height: 20px; color: var(--ink); }
+
+  .tag { display: inline-block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+         padding: 4px 10px; border-radius: 9999px; font-weight: 600; }
+  .tag.green { background: var(--pale-green); color: var(--pale-green-ink); }
+  .tag.blue { background: var(--pale-blue); color: var(--pale-blue-ink); }
+  .tag.yellow { background: var(--pale-yellow); color: var(--pale-yellow-ink); }
+
+  pre { font-family: var(--mono); font-size: 13.5px; background: #f7f6f3; border: 1px solid var(--line);
+        border-radius: 8px; padding: 18px 20px; overflow-x: auto; margin: 0; line-height: 1.65; }
+  kbd { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); border-radius: 4px;
+        background: #f7f6f3; padding: 2px 6px; }
+
+  details { border-bottom: 1px solid var(--line); padding: 20px 0; }
+  details summary { cursor: pointer; list-style: none; font-weight: 500; font-size: 17px;
+                    display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after { content: "+"; font-family: var(--mono); color: var(--ink-mute); font-size: 19px; }
+  details[open] summary::after { content: "\2212"; }
+  details p { color: var(--ink-soft); margin: 12px 0 0; max-width: 68ch; }
+
+  footer { border-top: 1px solid var(--line); padding: 48px 0 72px; color: var(--ink-mute); font-size: 14px; }
+  footer a { color: var(--ink-soft); }
+
+  .js .reveal { opacity: 0; transform: translateY(12px); }
+  .js .reveal.in { opacity: 1; transform: none;
+               transition: opacity 600ms cubic-bezier(.16,1,.3,1), transform 600ms cubic-bezier(.16,1,.3,1);
+               transition-delay: calc(var(--i, 0) * 80ms); }
+  @media (prefers-reduced-motion: reduce) {
+    .js .reveal, .js .reveal.in { opacity: 1; transform: none; transition: none; }
+    .ambient { animation: none; }
+  }
+  @media (max-width: 760px) {
+    .span3, .span2 { grid-column: span 6; }
+    header { padding: 64px 0 48px; }
+    section { padding: 64px 0; }
+  }
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+
+<nav>
+  <div class="wrap">
+    <span class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M24 50 C 24 38, 34 36, 36 26 C 37 20, 34 16, 32 13"/><path d="M32 13 L 46 9"/>
+        </g>
+        <circle cx="31" cy="13" r="5" fill="currentColor"/>
+        <path fill="currentColor" d="M10 46 C 10 40, 18 38, 26 40 C 36 42, 40 48, 40 52 C 38 58, 26 60, 18 56 C 12 54, 10 50, 10 46 Z"/>
+        <g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="M24 58 L 24 62"/><path d="M32 58 L 34 62"/></g>
+      </svg>
+      Heron
+    </span>
+    <span class="navlinks">
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/musaJawad004/heron">GitHub</a>
+    </span>
+  </div>
+</nav>
+
+<main>
+<header class="wrap">
+  <h1 class="reveal">Every Claude Code session, in your menu bar.</h1>
+  <p class="lede reveal" style="--i:1">Heron watches the <strong>Claude Code</strong> sessions running on your machine and tells you which one is working, which is idle, and which has been sitting on a permission prompt while you looked away.</p>
+  <div class="cta reveal" style="--i:2">
+    <a class="btn" href="https://github.com/musaJawad004/heron/releases">Download</a>
+    <a class="btn ghost" href="https://github.com/musaJawad004/heron">Read the source</a>
+  </div>
+  <p class="meta reveal" style="--i:3">macOS 12+ &middot; Windows 10/11 &middot; Linux &middot; 4 MB &middot; MIT &middot; no network access</p>
+
+  <div class="shot reveal" style="--i:4">
+    <div class="chrome"><i></i><i></i><i></i></div>
+    <img src="demo.gif" width="680" height="358" alt="Heron's menu bar popover listing three running Claude Code sessions, with a Focus button appearing on hover">
+  </div>
+</header>
+
+<section id="features" class="wrap">
+  <h2 class="reveal">What it does</h2>
+  <p class="sub reveal" style="--i:1">One process, no configuration, and nothing to sign into.</p>
+  <div class="bento">
+    <div class="card span3 reveal" style="--i:1">
+      <span class="tag green">Live</span>
+      <h3>A count you can trust</h3>
+      <p>The menu bar carries the number of live sessions and grows a dot the moment one needs an answer from you.</p>
+    </div>
+    <div class="card span3 reveal" style="--i:2">
+      <span class="tag blue">One click</span>
+      <h3>Start, resume, focus</h3>
+      <p>Press <kbd>&#8984;N</kbd>, pick a folder, and your terminal opens there running <code>claude</code>. Click a past session to resume it, or a running one to raise its tab.</p>
+    </div>
+    <div class="card span2 reveal" style="--i:3">
+      <span class="tag yellow">Attention</span>
+      <h3>Notifications that mean something</h3>
+      <p>A banner when Claude asks for permission or finishes a turn. Click it to land in that terminal.</p>
+    </div>
+    <div class="card span2 reveal" style="--i:4">
+      <h3>The floating panel</h3>
+      <p>A small always-on-top capsule pinned to the edge of whichever screen you are on. It never steals focus.</p>
+    </div>
+    <div class="card span2 reveal" style="--i:5">
+      <h3>Reads what is already there</h3>
+      <p>No daemon, no wrapper around the CLI. It watches the files Claude Code writes and stays out of the way.</p>
+    </div>
+  </div>
+</section>
+
+<section id="privacy" class="wrap">
+  <h2 class="reveal">There is no network code</h2>
+  <p class="sub reveal" style="--i:1">Not for telemetry, not for updates, not for anything. That is a property you can check rather than a promise you have to take.</p>
+  <pre class="reveal" style="--i:2">grep -rnE "reqwest|hyper|std::net|TcpStream" src-tauri/src   <span style="color:#787774"># nothing</span>
+grep -rnE "fetch\(|XMLHttpRequest|WebSocket" src            <span style="color:#787774"># nothing</span></pre>
+  <p class="sub reveal" style="--i:3; margin-top:28px">Two scanners enforce it on every push and once a day, because a dependency can be poisoned long after it is merged. A patch that adds an HTTP client fails the build exactly like malware would.</p>
+</section>
+
+<section id="install" class="wrap">
+  <h2 class="reveal">Install</h2>
+  <p class="sub reveal" style="--i:1">Download a build, or compile it yourself in a minute.</p>
+  <pre class="reveal" style="--i:2">git clone https://github.com/musaJawad004/heron.git
+cd heron
+yarn install
+yarn tauri build</pre>
+  <p class="sub reveal" style="--i:3; margin-top:28px">Builds are unsigned: no developer account, no notarization, nothing uploaded. On macOS a downloaded copy needs one right-click, then Open, the first time.</p>
+</section>
+
+<section class="wrap">
+  <h2 class="reveal">Questions</h2>
+  <div class="reveal" style="--i:1">
+    <details><summary>Does it send my prompts anywhere?</summary><p>No. There is no network code in the repository at all. The only prompt-derived text it stores is a session title, truncated to 80 characters, kept so the list is readable.</p></details>
+    <details><summary>Does it need an API key or a Claude account?</summary><p>No. Heron never contacts Anthropic. It reads the files the Claude Code CLI already writes on your disk.</p></details>
+    <details><summary>Does it work with Claude Code on Windows?</summary><p>Yes. It reads <code>%USERPROFILE%\\.claude</code> and registers its hooks through PowerShell. The tray icon carries the session count there too.</p></details>
+    <details><summary>Will it slow Claude Code down?</summary><p>No. The hook it installs writes one small file and exits. It is registered as asynchronous with a five second timeout, so it can never block or alter a session.</p></details>
+    <details><summary>How do I get notified when Claude asks for permission?</summary><p>Settings, then Hooks, then Install hooks. That adds six entries to <code>~/.claude/settings.json</code> after taking a timestamped backup, and Uninstall removes exactly those.</p></details>
+  </div>
+</section>
+</main>
+
+<footer class="wrap">
+  <p>Heron is free and open source under the MIT license. Built by <a href="https://github.com/musaJawad004">Muhammad Musa</a>. Not affiliated with Anthropic.</p>
+</footer>
+
+<script>
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+  }, { rootMargin: '0px 0px -8% 0px' });
+  document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+  addEventListener('load', () => {
+    setTimeout(() => document.querySelectorAll('.reveal').forEach((el) => el.classList.add('in')), 1200);
+  });
+</script>
+</body>
+</html>

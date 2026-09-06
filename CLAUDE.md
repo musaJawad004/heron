@@ -17,8 +17,8 @@ Windows 10/11, Linux. Unsigned local builds; no Apple developer identity needed.
 ```bash
 yarn install                       # once
 yarn tauri dev                 # dev app with hot reload (tray appears)
-cd src-tauri && cargo check && cargo test && cargo clippy && cargo fmt
-yarn run check                     # svelte-check (strict TS)
+cd src-tauri && cargo check && cargo test && cargo clippy -- -D warnings && cargo fmt
+yarn run check                    # svelte-check (NOT `yarn check`, see below)
 yarn prettier -w src               # format frontend
 yarn tauri build               # release bundle → src-tauri/target/release/bundle/
 ```
@@ -81,6 +81,41 @@ adversarial verification.
 SessionStart → repo state. PreToolUse(Bash) → blocks damage to `~/.claude`,
 `.key` reads, publishing, force-push. PostToolUse(Edit/Write) → rustfmt /
 prettier. Stop → refuses to end the turn while `cargo check` or `svelte-check` fail.
+
+## Things that will bite you
+
+Each of these cost real debugging. They are the reason this section exists.
+
+- **Monitor coordinates.** macOS lays the desktop out in points but reports each
+  monitor's origin in that monitor's own pixels. On a mixed-DPI desk (2x built-in
+  beside a 1x external) the physical rectangles **overlap**: 0..3024 and
+  1512..3432. Placing a window by them puts it on the wrong screen or half on
+  each. `windows::monitor_infos` normalises every monitor by its own scale, so
+  everything downstream is in points and `MonitorInfo::scale` is 1.0.
+  `device_scale` keeps the real factor, used only to read raw platform rects.
+- **Which screen's menu bar was clicked.** The tray rect arrives in the pixels of
+  that screen, and position alone cannot tell the screens apart. The icon's
+  *height* can: divided by the right scale it matches that screen's menu bar
+  inset. See `placement::tray_monitor`.
+- **`yarn run check`, never `yarn check`.** Yarn 1 has a built-in `check` that
+  silently shadows the script and exits 0 without running svelte-check.
+- **Notifications need the bundle.** `tauri-plugin-notification` attributes
+  banners to Terminal.app in a dev build and discards the click response, so
+  macOS notifications go through `mac-notification-sys` directly. Test them from
+  `Heron.app`, never `yarn tauri dev`.
+- **The hook keeps firing when Heron is not running.** What it spools is the
+  CLI's raw payload, prompt text included. Unread files are discarded after ten
+  minutes and the spool is removed on uninstall. Do not weaken that.
+- **`AppState` locks.** Never hold the `parking_lot::Mutex` while calling into
+  Tauri (`emit`, window APIs). Clone what you need and drop the guard first.
+
+## Security scanners
+
+`scripts/scan-supply-chain.py` (this repo, every remote branch) and
+`scripts/scan-machine.py` (any folder) look for dropper signatures, fonts whose
+bytes are not fonts, and **any network code**, since "Heron has none" is the
+central claim. Both run in CI on push and daily. Both skip themselves, because
+they quote the signatures verbatim.
 
 ## Verifying for real
 
