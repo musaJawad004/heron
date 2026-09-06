@@ -35,10 +35,10 @@ Heron has **no network code**. Not for telemetry, not for updates, not for anyth
 
 ## Install
 
-Download the bundle for your OS from the [Releases](https://github.com/glixentech/heron/releases) page (`.dmg`, `.msi`/`.exe`, `.AppImage`/`.deb`), or build it yourself:
+Download the bundle for your OS from the [Releases](https://github.com/musaJawad004/heron/releases) page (`.dmg`, `.msi`/`.exe`, `.AppImage`/`.deb`), or build it yourself:
 
 ```bash
-git clone https://github.com/glixentech/heron.git
+git clone https://github.com/musaJawad004/heron.git
 cd heron
 npm install
 npm run tauri build        # → src-tauri/target/release/bundle/
