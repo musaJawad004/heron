@@ -1,30 +1,56 @@
 # Heron architecture
 
-Heron is a macOS menu bar app (SwiftUI + AppKit, Swift Package, macOS 14+) that
-watches Claude Code CLI sessions on the local machine. **Nothing leaves the
-Mac: no network code exists in this repository.** All state is read from
-`~/.claude` (written by the Claude Code CLI itself) and from
-`~/Library/Application Support/Heron`.
+Heron is a Tauri v2 app (Rust core + Svelte 5 frontend) that watches Claude
+Code CLI sessions on the local machine. **Nothing leaves the machine: no
+network code exists in this repository.** State is read from the CLI's own
+files under `~/.claude` and Heron's app-data directory.
 
 ```
-Sources/Heron
-├── App/        HeronApp (@main, MenuBarExtra + Settings scenes), AppState (hub)
-├── Core/       Models (shared contract), SessionRegistry (live), TranscriptIndex (history)
-├── Hooks/      HookInstaller (settings.json), HookEventWatcher (spool dir), Notifier
-├── Launch/     TerminalLauncher (new / resume / focus in a terminal app)
-├── Settings/   AppSettings (UserDefaults)
-└── UI/         Theme, MenuBar/, Panel/ (floating NSPanel), Settings/
+src-tauri/src
+├── lib.rs / main.rs   Tauri builder, plugins, window events
+├── model.rs           shared types (mirrored in src/lib/types.ts)
+├── settings.rs        Settings + JSON store
+├── state.rs           AppState hub: polls registry, watches hooks, publishes Snapshot
+├── commands.rs        IPC surface
+├── tray.rs            tray icon / count / menu
+├── windows.rs         popover, panel, settings placement & behaviour
+├── claude/            paths, registry (live), transcripts (history + titles)
+├── hooks/             installer, watcher, notify
+└── launch/            terminals, launch scripts, focus, find_claude
+src
+├── app.css            tokens
+├── lib/api.ts         invoke/listen wrappers (only Tauri import)
+├── lib/stores.svelte.ts  runes store
+├── lib/types.ts       TS mirror
+└── routes/{popover,panel,settings}
 ```
 
-`AppState` is the only object the UI talks to. Modules never import each other
-except through `Models.swift`. See the doc comment at the top of each stub for
-the contract it must fulfil.
+Data flow: background threads → `AppState` (mutex) → `publish()` → tray
+update + `snapshot` event → every window's store. Actions go the other way
+through `commands.rs`.
 
-## Data sources (observed on Claude Code 2.1.263, macOS 26)
+## Where Claude Code keeps its files
 
-### Live registry — `~/.claude/sessions/<pid>.json`
-One file per running CLI process, rewritten on every status change. Delete
-nothing here. Example:
+| | macOS / Linux | Windows |
+|---|---|---|
+| root | `~/.claude` | `%USERPROFILE%\.claude` |
+| override | `CLAUDE_CONFIG_DIR` | same |
+| live registry | `sessions/<pid>.json` | same |
+| transcripts | `projects/<encoded cwd>/<sessionId>.jsonl` | same (`C:\Users\me\proj` → `C--Users-me-proj`) |
+| history | `history.jsonl` | same |
+| settings + hooks | `settings.json` | same |
+| executable | `~/.local/bin/claude` (also Homebrew, npm global) | `%USERPROFILE%\.local\bin\claude.exe` (also npm global) |
+
+Heron's own files live in the Tauri app-data dir: macOS
+`~/Library/Application Support/com.glixentech.heron`, Windows
+`%APPDATA%\com.glixentech.heron`, Linux `~/.local/share/com.glixentech.heron`:
+`settings.json`, `events/` (hook spool), `bin/heron-hook[.ps1]`, `cache/`,
+`launch/`.
+
+## Data sources (observed on Claude Code 2.1.263)
+
+### Live registry — `sessions/<pid>.json`
+One file per running CLI process, rewritten on every status change.
 
 ```json
 {"pid":3412,"sessionId":"4e035c9a-1ab6-4026-aed1-0fa8731e7792","cwd":"/Users/adz/civl-mobile-app",
@@ -36,17 +62,17 @@ nothing here. Example:
  "bridgeSessionId":"session_013zRkg3XpHjccY8Bo4FPPmo"}
 ```
 
-* `status` values seen in the binary: `busy`, `idle`, `needs_input`, `waiting`.
+* `status`: `busy`, `idle`, `needs_input`, `waiting` (strings found in the binary).
 * Timestamps are Unix **milliseconds**.
-* A sibling `<pid>.<hash>.key` file holds a private token — **never read it**.
-* Files can outlive a crashed process: always verify `pid` with `kill(pid, 0)`
-  (and ideally that the process command line contains `claude`).
-* The controlling tty is not in the file; get it via `ps -o tty= -p <pid>`.
+* A sibling `<pid>.<hash>.key` holds a private token — **never read it**.
+* Files can outlive a crashed process: verify the pid is alive **and** its
+  command line contains `claude` (pid reuse).
+* The controlling tty is not in the file; on Unix get it from the process
+  table (`ps -o tty= -p <pid>`). Windows has no tty; focus by window instead.
 
-### Transcripts — `~/.claude/projects/<encoded-cwd>/<sessionId>.jsonl`
-`<encoded-cwd>` is the cwd with `/` (and other non-alphanumerics) replaced by
-`-`, so it is ambiguous — read `cwd` from the lines instead. Lines are JSON
-objects. Relevant shapes:
+### Transcripts — `projects/<encoded-cwd>/<sessionId>.jsonl`
+The directory name replaces non-alphanumerics with `-` (lossy). Read `cwd`
+from the lines. Relevant line shapes:
 
 ```json
 {"type":"mode","mode":"normal","sessionId":"…"}
@@ -54,31 +80,28 @@ objects. Relevant shapes:
 {"parentUuid":null,"isSidechain":false,"promptId":"…","type":"user",
  "message":{"role":"user","content":"Please …"},"timestamp":"2026-09-04T13:37:41.586Z",
  "uuid":"…","cwd":"/Users/adz","sessionId":"…","version":"2.1.260","gitBranch":"main"}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"…"}]},"cwd":"…",…}
-{"type":"system","subtype":"local_command","content":"<command-name>/resume</command-name>…",…}
-{"type":"cost-state","sessionId":"…","totalCostUSD":0,…}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"…"}]},"cwd":"…"}
+{"type":"system","subtype":"local_command","content":"<command-name>/resume</command-name>…"}
+{"type":"cost-state","sessionId":"…","totalCostUSD":0}
 ```
 
-* `message.content` for user lines is either a string or an array of blocks
+* User `message.content` is a string or an array of blocks
   (`{"type":"text","text":…}`, `{"type":"tool_result",…}`). The **title** is
-  the first user line whose text does not start with `<` (skip
-  `<command-name>`, `<local-command-stdout>`, `<system-reminder>` wrappers) and
-  is not a `tool_result`.
-* Sub-agent transcripts live in `<sessionId>/subagents/` — ignore those dirs.
-* Files can be many MB. Read only the head (first 64 KB is plenty for
-  cwd/title); use mtime for recency.
+  the first user line whose text does not start with `<` (skips
+  `<command-name>`, `<local-command-stdout>`, `<system-reminder>`) and is not a
+  `tool_result`. Strip a leading `[Pasted text #N +M lines]` marker.
+* Sub-agent transcripts live in `<sessionId>/subagents/` — ignore.
+* Files can be many MB: read only the first 64 KB; mtime = recency.
 
-### Prompt history — `~/.claude/history.jsonl`
-One line per prompt: `{"display":"…","pastedContents":{},"timestamp":1788685051331,
-"project":"/Users/adz","sessionId":"…"}`. Cheap index of (sessionId → project,
-last prompt, last time). Use it to discover sessions quickly; fall back to the
-transcript for the title.
+### Prompt history — `history.jsonl`
+`{"display":"…","pastedContents":{},"timestamp":1788685051331,"project":"/Users/adz","sessionId":"…"}`
+per prompt. Cheap index of sessionId → project, last time.
 
-### User settings — `~/.claude/settings.json`
-Where hooks get registered. Merge carefully; other tools may own keys here.
+### User settings — `settings.json`
+Where hooks are registered. Merge carefully; other tools own keys here.
 
 ## Hook receiver
-`HookInstaller` writes `~/Library/Application Support/Heron/bin/heron-hook`
-and registers it in settings.json. The script only spools stdin to
-`~/Library/Application Support/Heron/events/<ts>-<pid>.json`. See
-`docs/HOOKS.md` for the payloads.
+`hooks::installer` writes a receiver script into the app-data `bin/` dir and
+registers it (exec form, `async: true`) for six events. The script only
+spools stdin to `events/<ms>-<pid>.json`; `hooks::watcher` parses and deletes
+each file. Payloads: `docs/HOOKS.md`.

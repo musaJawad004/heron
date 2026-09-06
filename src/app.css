@@ -1,0 +1,74 @@
+/* Heron design tokens. Semantic colours only; light and dark come from the
+   OS via color-scheme, never from class toggles. Windows are transparent so
+   the OS material (vibrancy / mica) shows through `--surface`. */
+:root {
+  color-scheme: light dark;
+
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', system-ui, Roboto,
+    'Helvetica Neue', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --text: light-dark(rgba(0, 0, 0, 0.88), rgba(255, 255, 255, 0.9));
+  --text-secondary: light-dark(rgba(0, 0, 0, 0.55), rgba(255, 255, 255, 0.55));
+  --text-tertiary: light-dark(rgba(0, 0, 0, 0.35), rgba(255, 255, 255, 0.35));
+  --surface: light-dark(rgba(255, 255, 255, 0.55), rgba(30, 30, 32, 0.55));
+  --surface-solid: light-dark(#f6f6f7, #1f1f21);
+  --hover: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.07));
+  --active: light-dark(rgba(0, 0, 0, 0.09), rgba(255, 255, 255, 0.12));
+  --separator: light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.1));
+  --accent: light-dark(#0a66ff, #3d8bff);
+  --accent-contrast: #fff;
+
+  /* Status */
+  --status-busy: light-dark(#34c759, #30d158);
+  --status-idle: light-dark(#8e8e93, #98989d);
+  --status-attention: light-dark(#ff9500, #ff9f0a);
+  --status-done: light-dark(#0a84ff, #409cff);
+  --status-error: light-dark(#ff3b30, #ff453a);
+
+  --radius-window: 12px;
+  --radius-row: 8px;
+  --radius-control: 6px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-lg: 15px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+  overflow: hidden;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}

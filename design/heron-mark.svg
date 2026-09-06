@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Heron mark: a resting heron seen from the side. Single colour so it
+       works as a template (menu bar) glyph. -->
+  <g fill="none" stroke="#000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- neck: S curve from the body up to the head -->
+    <path d="M24 50 C 24 38, 34 36, 36 26 C 37 20, 34 16, 32 13"/>
+    <!-- beak -->
+    <path d="M32 13 L 46 9"/>
+  </g>
+  <!-- head -->
+  <circle cx="31" cy="13" r="5" fill="#000"/>
+  <!-- body -->
+  <path fill="#000" d="M10 46 C 10 40, 18 38, 26 40 C 36 42, 40 48, 40 52 C 38 58, 26 60, 18 56 C 12 54, 10 50, 10 46 Z"/>
+  <!-- legs -->
+  <g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round">
+    <path d="M24 58 L 24 62"/>
+    <path d="M32 58 L 34 62"/>
+  </g>
+</svg>

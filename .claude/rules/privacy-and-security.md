@@ -3,31 +3,32 @@
 Heron is a local-only, open-source observer of Claude Code sessions. These are
 hard rules, not preferences.
 
-- **No network.** Never import or call `URLSession`, `Network`, sockets, or
-  spawn `curl`/`wget`. No analytics, crash reporting, update checks, or
-  telemetry. If a feature seems to need the network, it does not belong in Heron.
-- **Read-only on `~/.claude`.** Heron reads `sessions/*.json`, `projects/**/*.jsonl`,
-  `history.jsonl` and `settings.json`. The only write is `HookInstaller`
-  merging its own hook entries into `settings.json` (after a timestamped
-  backup, atomic write, removable byte-for-byte on uninstall).
-- **Never read `~/.claude/sessions/*.key`** or the `messagingSocketPath`
-  socket. Those are the CLI's private credentials.
+- **No network.** No `reqwest`, `hyper`, `tokio::net`, `std::net`, WebSocket,
+  `fetch()` in the webview, no `tauri-plugin-http`/`updater`, no analytics,
+  crash reporting or update checks. The CSP in `tauri.conf.json` allows only
+  `'self'` and the IPC origin; keep it that way. The only "network-ish" act is
+  handing an `https://` URL to the OS browser from the About page.
+- **Read-only on `~/.claude`.** Heron reads `sessions/*.json`,
+  `projects/**/*.jsonl` (head only), `history.jsonl` and `settings.json`. The
+  only write is `hooks::installer` merging its own hook entries into
+  `settings.json` after a timestamped backup, atomically, removable exactly.
+- **Never read `~/.claude/sessions/*.key`** or connect to the CLI's
+  messaging socket. Those are private credentials.
 - **Never persist prompt content.** `user_input`, `tool_input`, transcript
-  message bodies and pasted text stay out of logs, caches, notifications and
-  UserDefaults. A session *title* is the first prompt truncated to 80 chars
-  and is the only prompt-derived text stored (in the cache under App Support).
-- **Files Heron creates** under `~/Library/Application Support/Heron` are
-  created with mode `0700` (dirs) / `0600` (files).
-- **Shell safety.** Anything passed to a shell is quoted with a single
-  `shellQuote()` helper (single quotes, `'` → `'\''`). Never build a shell
-  string by interpolating a path, session id or argument directly. Prefer
-  `Process` with an argument array over `sh -c`.
-- **Hooks are observers.** The installed hook script must exit 0 with empty
-  stdout in every case, never exit 2, and never block (`async: true`,
-  short timeout).
-- **No entitlements that grant broad access.** Accessibility, Full Disk
-  Access, Screen Recording are never requested. Apple Events are used only to
-  raise a terminal tab and only if the user opts in (TCC prompt).
-- Dependencies: none. Foundation, AppKit, SwiftUI, UserNotifications,
-  ServiceManagement only. Do not add a Swift package dependency without
-  discussing it in an issue first.
+  bodies and pasted text stay out of logs, caches, notifications, settings and
+  the event log. A session *title* (first prompt, 80 chars) is the only
+  prompt-derived text stored, in the title cache.
+- **Files Heron creates** under its app-data dir are `0700` (dirs) / `0600`
+  (files) on Unix.
+- **No shell strings.** Spawn processes with `std::process::Command` and
+  argument arrays. When a value must go inside a generated script, pass it
+  through `launch::shell_quote` (POSIX) or the PowerShell equivalent. Never
+  format a path, session id or argument into a shell string unquoted.
+- **Hooks are observers.** The installed hook script exits 0 with no stdout in
+  every case, never blocks (`async: true`, short timeout), never exits 2.
+- **Tauri capabilities stay minimal.** The frontend gets only the permissions
+  in `src-tauri/capabilities/default.json`; commands validate their inputs
+  (`open_url` accepts `https://` only). No `shell:allow-execute`, no `fs`
+  plugin exposed to the webview.
+- **Dependencies** are added only with a reason in the PR; prefer std. Run
+  `cargo tree` after adding one and make sure nothing network-capable came in.

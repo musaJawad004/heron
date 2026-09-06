@@ -32,10 +32,10 @@ const VERDICT_SCHEMA = {
 }
 
 const DIMENSIONS = [
-  { key: 'concurrency', prompt: 'Review `git diff main...HEAD` in this Heron checkout for Swift 6 concurrency bugs: main-actor violations, unsafe Sendable, leaked DispatchSources/fds, uncancelled Tasks. Follow .claude/rules/swift.md.' },
-  { key: 'privacy', prompt: 'Review `git diff main...HEAD` in this Heron checkout against .claude/rules/privacy-and-security.md: network use, unquoted shell strings, prompt content persisted, unsafe settings.json merging, file modes.' },
-  { key: 'data-formats', prompt: 'Review `git diff main...HEAD` in this Heron checkout for mistakes against docs/ARCHITECTURE.md: ms vs s timestamps, stale pid files, reading whole transcripts, wrong field names from docs/HOOKS.md.' },
-  { key: 'ui', prompt: 'Review `git diff main...HEAD` in this Heron checkout against .claude/rules/ui.md: hard-coded colours, dark-mode breakage, spacing off-grid, missing empty states, non-native patterns.' },
+  { key: 'concurrency', prompt: 'Review `git diff main...HEAD` in this Heron checkout for Rust concurrency bugs: mutex guards held across Tauri emit/window calls, threads and notify watchers without a stop path, blocking work on the main thread. Follow .claude/rules/rust.md.' },
+  { key: 'privacy', prompt: 'Review `git diff main...HEAD` in this Heron checkout against .claude/rules/privacy-and-security.md: network crates or fetch(), unquoted shell strings in generated scripts, prompt content persisted, unsafe settings.json merging, file modes, Tauri capability/CSP creep.' },
+  { key: 'data-formats', prompt: 'Review `git diff main...HEAD` in this Heron checkout for mistakes against docs/ARCHITECTURE.md: ms vs s timestamps, stale pid files, reading whole transcripts, wrong field names from docs/HOOKS.md, Windows path handling, model.rs vs src/lib/types.ts drift.' },
+  { key: 'ui', prompt: 'Review `git diff main...HEAD` in this Heron checkout against .claude/rules/ui.md: hard-coded colours, dark-mode breakage, spacing off-grid, missing empty states, non-runes Svelte, direct invoke() outside api.ts.' },
 ]
 
 const results = await pipeline(

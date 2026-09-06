@@ -13,6 +13,8 @@ deny() { echo "Heron guard: blocked — $1" >&2; exit 2; }
 printf '%s' "$cmd" | grep -Eq '\.claude/sessions/[^ ]*\.key' && deny "reading or writing session .key files"
 printf '%s' "$cmd" | grep -Eq '(rm|mv|truncate|>)[^|]*\.claude/(sessions|projects|history\.jsonl)' && deny "modifying ~/.claude session data; Heron is read-only there"
 printf '%s' "$cmd" | grep -Eq 'rm +-[a-zA-Z]*r[a-zA-Z]* +(~|\$HOME|/Users/[^/ ]+)/\.claude/?( |$)' && deny "deleting ~/.claude"
+# Never publish anything from a hook-driven session.
+printf '%s' "$cmd" | grep -Eq '(cargo +publish|npm +publish|gh +release +create)' && deny "publishing releases is a human action"
 # Keep history linear on main.
 printf '%s' "$cmd" | grep -Eq 'git +push[^|]*(--force|-f)[^|]*( main| origin main|$)' && deny "force-pushing main"
 exit 0

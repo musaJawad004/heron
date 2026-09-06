@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Heron uses Apple Events only to bring the terminal tab running a Claude Code session to the front.</string>
+    <key>NSUserNotificationsUsageDescription</key>
+    <string>Heron shows a local notification when a Claude Code session needs your attention or finishes.</string>
+</dict>
+</plist>

@@ -4,34 +4,39 @@ Source: https://code.claude.com/docs/en/hooks.md
 
 ## Registration (in `~/.claude/settings.json`)
 
+Heron uses the **exec form** (`command` + `args`): Claude Code spawns the file
+directly, no shell, so paths with spaces need no quoting and the same shape
+works on macOS, Linux and Windows.
+
 ```json
 {
   "hooks": {
     "Notification": [
-      { "matcher": "permission_prompt|idle_prompt|elicitation_dialog",
-        "hooks": [ { "type": "command", "command": "/Users/me/Library/Application Support/Heron/bin/heron-hook", "async": true, "timeout": 5 } ] }
+      { "matcher": "permission_prompt|idle_prompt|elicitation_dialog|elicitation_url_dialog|agent_needs_input|agent_completed",
+        "hooks": [ { "type": "command",
+                     "command": "/Users/me/Library/Application Support/com.glixentech.heron/bin/heron-hook",
+                     "args": [], "async": true, "timeout": 5 } ] }
     ],
-    "Stop":            [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "async": true, "timeout": 5 } ] } ],
-    "SessionStart":    [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "async": true, "timeout": 5 } ] } ],
-    "SessionEnd":      [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "async": true, "timeout": 5 } ] } ],
-    "PermissionRequest": [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "async": true, "timeout": 5 } ] } ],
-    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "async": true, "timeout": 5 } ] } ]
+    "Stop":              [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "args": [], "async": true, "timeout": 5 } ] } ],
+    "SessionStart":      [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "args": [], "async": true, "timeout": 5 } ] } ],
+    "SessionEnd":        [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "args": [], "async": true, "timeout": 5 } ] } ],
+    "PermissionRequest": [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "args": [], "async": true, "timeout": 5 } ] } ],
+    "UserPromptSubmit":  [ { "hooks": [ { "type": "command", "command": "…/heron-hook", "args": [], "async": true, "timeout": 5 } ] } ]
   }
 }
 ```
 
+Windows: `"command": "powershell.exe", "args": ["-NoProfile", "-NonInteractive",
+"-ExecutionPolicy", "Bypass", "-File", "C:\\Users\\me\\AppData\\Roaming\\com.glixentech.heron\\bin\\heron-hook.ps1"]`.
+
 * `matcher` omitted or `"*"` = all. Letters/digits/`_`/`-`/`|` = exact list;
   anything else = regex.
-* Hook object fields: `type` ("command"), `command`, `args` (exec form, no shell),
-  `timeout` (seconds, default 600), `async` (bool, fire-and-forget), `statusMessage`.
-* Command hooks run via `/bin/sh -c` in the session cwd with the login env.
+* Hook object fields: `type` ("command"), `command`, `args` (exec form),
+  `timeout` (seconds), `async` (fire-and-forget), `statusMessage`.
+* Without `args`, command hooks run via `/bin/sh -c` (Git Bash or PowerShell
+  on Windows) in the session cwd with the login env.
 * Exit **0 with no stdout** = pure observer; never exit 2 (blocks the action).
 * User-level and project-level hooks are merged additively per event.
-* Commands containing spaces (our path has "Application Support") must be
-  quoted inside the `command` string — or better, use `"command": "/bin/sh"`
-  with `"args": ["<path>"]`? No: prefer the shell form with the path quoted:
-  `"command": "\"$HOME/Library/Application Support/Heron/bin/heron-hook\""`.
-  `$HOME` is expanded by `/bin/sh`, so the entry stays valid if the home moves.
 
 ## Payloads (stdin JSON)
 

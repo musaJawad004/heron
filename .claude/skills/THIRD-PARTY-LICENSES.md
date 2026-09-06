@@ -1,29 +1,29 @@
 # Imported skills — attribution
 
-The skills below were imported unmodified (except the directory name, which
-must match the `name` frontmatter) from open-source repositories. All are MIT
-licensed; the original copyright notices are reproduced here as the license
-requires.
+The skills below were imported unmodified (directory name = `name` frontmatter)
+from open-source repositories. Original copyright notices are reproduced as
+their licenses require. The `heron-*` skills are original to this repository (MIT).
 
-| Skill directory | Source repository | Copyright |
+| Skill directory | Source repository | License / copyright |
 |---|---|---|
-| `swiftui-pro` | https://github.com/twostraws/SwiftUI-Agent-Skill | (c) 2026 Paul Hudson |
-| `concurrency-expert` | https://github.com/patrickserrano/skills (swift-concurrency-expert) | (c) 2025 Patrick Serrano |
-| `ui-patterns` | https://github.com/patrickserrano/skills (swiftui-ui-patterns) | (c) 2025 Patrick Serrano |
-| `performance-audit` | https://github.com/patrickserrano/skills (swiftui-performance-audit) | (c) 2025 Patrick Serrano |
-| `view-refactor` | https://github.com/patrickserrano/skills (swiftui-view-refactor) | (c) 2025 Patrick Serrano |
-| `macos-spm-app-packaging` | https://github.com/patrickserrano/skills (release-macos-spm-packaging) | (c) 2025 Patrick Serrano |
-| `coding-best-practices` | https://github.com/rshankras/claude-code-apple-skills (macos/) | (c) 2025 Ravishankar |
-| `architecture-patterns` | https://github.com/rshankras/claude-code-apple-skills (macos/) | (c) 2025 Ravishankar |
-| `appkit-swiftui-bridge` | https://github.com/rshankras/claude-code-apple-skills (macos/) | (c) 2025 Ravishankar |
-| `macos-capabilities` | https://github.com/rshankras/claude-code-apple-skills (macos/) | (c) 2025 Ravishankar |
-| `macos-tahoe-apis` | https://github.com/rshankras/claude-code-apple-skills (macos/) | (c) 2025 Ravishankar |
-| `sf-symbols` | https://github.com/rshankras/claude-code-apple-skills (design/) | (c) 2025 Ravishankar |
-| `typography` | https://github.com/rshankras/claude-code-apple-skills (design/) | (c) 2025 Ravishankar |
-| `ux-writing` | https://github.com/rshankras/claude-code-apple-skills (design/) | (c) 2025 Ravishankar |
-| `secure-code-guardian` | https://github.com/jeffallan/claude-skills | (c) 2025 Jeff Allan |
+| `rust-engineer` | https://github.com/jeffallan/claude-skills | MIT © 2025 Jeff Allan |
+| `typescript-pro` | https://github.com/jeffallan/claude-skills | MIT © 2025 Jeff Allan |
+| `secure-code-guardian` | https://github.com/jeffallan/claude-skills | MIT © 2025 Jeff Allan |
+| `code-reviewer` | https://github.com/jeffallan/claude-skills | MIT © 2025 Jeff Allan |
+| `test-master` | https://github.com/jeffallan/claude-skills | MIT © 2025 Jeff Allan |
+| `svelte5-init` | https://github.com/OliveiraCleidson/svelte-5-skills | MIT © Cleidson Oliveira |
+| `svelte5-review` | https://github.com/OliveiraCleidson/svelte-5-skills | MIT © Cleidson Oliveira |
+| `frontend-design` | https://github.com/anthropics/skills | Apache-2.0 © Anthropic (see `frontend-design/LICENSE.txt`) |
+| `tauri` | https://github.com/full-stack-skills/tauri-skills | Apache-2.0 (per repository README) |
+| `tauri-app-system-tray` | https://github.com/full-stack-skills/tauri-skills | Apache-2.0 (per repository README) |
+| `tauri-window` | https://github.com/full-stack-skills/tauri-skills | Apache-2.0 (per repository README) |
+| `tauri-app-notification` | https://github.com/full-stack-skills/tauri-skills | Apache-2.0 (per repository README) |
+| `tauri-security` | https://github.com/full-stack-skills/tauri-skills | Apache-2.0 (per repository README) |
+| `tauri-build` | https://github.com/full-stack-skills/tauri-skills | Apache-2.0 (per repository README) |
+| `tauri-app-positioner` | https://github.com/full-stack-skills/tauri-skills | Apache-2.0 (per repository README) |
+| `tauri-app-autostart` | https://github.com/full-stack-skills/tauri-skills | Apache-2.0 (per repository README) |
 
-MIT License text (applies to each of the above):
+MIT License (applies to the MIT entries above):
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -43,4 +43,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-The two `heron-*` skills are original to this repository (MIT, see /LICENSE).
+Apache License 2.0 entries: the full license text is at
+https://www.apache.org/licenses/LICENSE-2.0 and reproduced in
+`frontend-design/LICENSE.txt`. The `full-stack-skills/tauri-skills` repository
+declares Apache-2.0 in its README badge; its LICENSE file contains third-party
+notices only, so treat those eight skills as Apache-2.0 per the README.

@@ -1,34 +1,33 @@
 ---
 name: heron-build
-description: Build, bundle, run, test and reinstall Heron.app from the Swift package (no Xcode project, ad-hoc signed, fully local). Use for "build the app", "run it", "reinstall", "why won't it launch", or before verifying a UI change on the real Mac.
+description: Build, run, test, lint and package Heron (Tauri v2 + Svelte 5 + Rust) on macOS, Windows and Linux — dev loop, release bundles, logs, and the gotchas of a tray app with transparent windows. Use for "run it", "build the app", "why won't it start", or before verifying a change for real.
 ---
 # Building and running Heron
 
-Heron is a plain Swift package. `Scripts/build-app.sh` turns the executable into
-`dist/Heron.app` with `Resources/Info.plist`, the SwiftPM resource bundle and an
-**ad-hoc** signature (`codesign -s -`). No Apple developer identity, no
-notarization, nothing is uploaded anywhere.
+Heron is a Tauri v2 app: Rust core in `src-tauri/`, SvelteKit (static, no SSR)
+frontend in `src/`. No Apple developer identity or notarization is needed for
+local use; release bundles are unsigned unless you add your own keys.
 
 | Task | Command |
 |---|---|
-| Compile only | `swift build` |
-| Unit tests | `swift test` |
-| Build the .app | `make app` (→ `dist/Heron.app`) |
-| Run it | `pkill -x Heron; make run` |
-| Install to /Applications | `make install` |
-| Format | `swift format --in-place --configuration .swift-format <file>` |
-| Logs | `log stream --predicate 'subsystem == "com.glixentech.heron"' --style compact` |
+| Dev loop (hot reload, tray appears) | `npm run tauri dev` |
+| Rust type-check / tests / lint | `cd src-tauri && cargo check && cargo test && cargo clippy` |
+| Frontend type-check | `npm run check` |
+| Format | `cd src-tauri && cargo fmt` · `npx prettier -w src` |
+| Release bundle for this OS | `npm run tauri build` → `src-tauri/target/release/bundle/` |
+| macOS logs | `log stream --predicate 'process == "heron"' --style compact` or the log file under `~/Library/Logs/com.glixentech.heron/` |
+| Windows/Linux logs | `%APPDATA%\com.glixentech.heron\logs\` / `~/.local/share/com.glixentech.heron/logs/` |
 
 Gotchas
-- `UNUserNotificationCenter` crashes when the binary runs outside a `.app`
-  bundle. Always test notifications through `dist/Heron.app`, never via
-  `swift run`.
-- Because the app is ad-hoc signed, macOS ties TCC grants (notifications,
-  Apple Events) to the bundle path + signature. Rebuilding keeps them as long
-  as the bundle id and path are unchanged; moving the app resets them.
-- Login item (`SMAppService`) only works from `/Applications` or
-  `~/Applications`.
-- `LSUIElement` is true: the app has no Dock icon. Quit it with ⌘Q from its
-  menu, or `pkill -x Heron`.
-- If a stale copy is running, `open dist/Heron.app` silently focuses it;
-  `pkill -x Heron` first.
+- The tray is the app: there is no main window. Quit via the tray menu or
+  `pkill -x heron` (dev) / `pkill -x Heron` (bundle).
+- Transparent + `windowEffects` windows require `macOSPrivateApi: true`
+  (already set). The webview body must stay `background: transparent`.
+- The popover hides on blur; while debugging keep DevTools attached
+  (`Cmd+Opt+I` in dev) or it will vanish when you click elsewhere.
+- The panel window is `focusable: false`; buttons inside still get clicks,
+  but inputs never get keyboard focus by design.
+- Windows: `npm run tauri build` needs the MSVC toolchain and WebView2 (preinstalled on Win 11).
+- Linux: needs `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev` for tray + bundling.
+- If a stale `heron` dev process is running, the single-instance plugin just
+  raises it; kill it first when testing startup paths.
