@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app || true
+      - name: Build
+        run: swift build -c release
+      - name: Test
+        run: swift test
+      - name: Bundle
+        run: Scripts/build-app.sh release
+      - name: Verify bundle
+        run: |
+          test -x dist/Heron.app/Contents/MacOS/Heron
+          plutil -lint dist/Heron.app/Contents/Info.plist
+          codesign --verify --verbose=2 dist/Heron.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Heron.app
+          path: dist/Heron.app

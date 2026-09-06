@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(swift build*)",
+      "Bash(swift test*)",
+      "Bash(swift format*)",
+      "Bash(swift package*)",
+      "Bash(make *)",
+      "Bash(Scripts/build-app.sh*)",
+      "Bash(open dist/Heron.app*)",
+      "Bash(pkill -x Heron*)",
+      "Bash(codesign *)",
+      "Bash(plutil *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(ps *)",
+      "Bash(pgrep *)",
+      "Read(~/.claude/sessions/*.json)",
+      "Read(~/.claude/projects/**/*.jsonl)",
+      "Read(~/.claude/history.jsonl)",
+      "Read(~/.claude/settings.json)",
+      "Read(~/Library/Application Support/Heron/**)"
+    ],
+    "deny": [
+      "Read(~/.claude/sessions/*.key)",
+      "Read(./**/*.key)",
+      "Read(./**/.env*)",
+      "Edit(~/.claude/sessions/**)",
+      "Write(~/.claude/sessions/**)",
+      "Edit(~/.claude/projects/**)",
+      "Write(~/.claude/projects/**)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-context.sh", "timeout": 10 }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.sh", "timeout": 5 }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-swift.sh", "timeout": 30 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/build-check.sh", "timeout": 240 }
+        ]
+      }
+    ]
+  }
+}
