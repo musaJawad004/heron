@@ -312,15 +312,43 @@ pub(crate) fn run_with_timeout(cmd: &mut Command, timeout: Duration) -> std::io:
             break Some(status);
         }
         if Instant::now() >= deadline {
-            let _ = child.kill();
+            kill_tree(&mut child);
             let _ = child.wait();
-            break None;
+            // Do not join the drain threads here. A grandchild the timed-out
+            // process spawned can still hold the pipe open, and waiting on the
+            // readers would block far past the timeout this function exists to
+            // enforce. The output is discarded on timeout anyway, so let the
+            // threads end on their own when the pipe finally closes.
+            return Ok(None);
         }
         thread::sleep(Duration::from_millis(15));
     };
     let stdout = out.and_then(|h| h.join().ok()).unwrap_or_default();
     let stderr = err.and_then(|h| h.join().ok()).unwrap_or_default();
     Ok(status.map(|status| Finished { status, stdout, stderr }))
+}
+
+/// Kill a timed-out child and, on Windows, the processes it spawned.
+///
+/// `Child::kill` ends only the process we started. `cmd /c ...` and
+/// `powershell -Command ...` do their work in a grandchild, which would
+/// otherwise survive and keep the inherited pipes open.
+fn kill_tree(child: &mut std::process::Child) {
+    #[cfg(windows)]
+    {
+        let killed = Command::new("taskkill")
+            .args(["/PID", &child.id().to_string(), "/T", "/F"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+        if killed {
+            return;
+        }
+    }
+    let _ = child.kill();
 }
 
 /// Spawn a child that is expected to keep running (a terminal). Waits up to
@@ -566,8 +594,11 @@ mod tests {
         };
         let started = Instant::now();
         let r = run_with_timeout(&mut cmd, Duration::from_millis(200)).unwrap();
-        assert!(r.is_none());
-        assert!(started.elapsed() < Duration::from_secs(5));
+        assert!(r.is_none(), "a stuck child times out rather than returning output");
+        // The point of the timeout is that the caller gets control back. On
+        // Windows the work happens in a grandchild holding the pipes, so this
+        // fails if the implementation waits on the output readers.
+        assert!(started.elapsed() < Duration::from_secs(5), "returned in {:?}", started.elapsed());
     }
 
     #[test]
