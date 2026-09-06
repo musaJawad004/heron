@@ -20,7 +20,7 @@
 use crate::model::{now_ms, HookEvent, HookEventKind, Session};
 use crate::settings::Settings;
 use parking_lot::Mutex;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tauri_plugin_notification::NotificationExt;
 
 /// The system's default notification sound, in the name each backend expects
@@ -75,6 +75,7 @@ pub fn post(app: &AppHandle, event: &HookEvent, session: Option<&Session>, setti
 fn post_clickable(app: &AppHandle, session_id: String, text: &Text, play_sound: bool) -> bool {
     use mac_notification_sys::{MainButton, Notification, NotificationResponse};
     use std::sync::OnceLock;
+    use tauri::Manager;
 
     // `set_application` needs a real bundle; remember whether it took.
     static READY: OnceLock<bool> = OnceLock::new();
