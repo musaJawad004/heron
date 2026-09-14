@@ -1,0 +1,380 @@
+name: Security Scan
+
+# Five checks on every push and pull request, with standard tools, and an
+# automatic fix for what can be removed safely. On a push (or a manual run) the
+# fixes are committed back to the same branch; on a pull request nothing is
+# changed and findings are only reported.
+#
+#   1. .vscode folder       every file; auto-run and hidden tasks are removed,
+#                           scripts, binaries or assets kept there are deleted
+#   2. Fonts, images, media real file type against the extension; a font,
+#                           image or media file that holds code is deleted
+#   3. Antivirus            ClamAV over every file; infected non-source files
+#                           are deleted, infected source files are reported
+#   4. Dependencies         npm, yarn, pnpm, Flutter/Dart, CocoaPods, Gradle,
+#                           pip, Composer: install scripts that run an asset or
+#                           pipe a download into a shell are removed; malicious
+#                           packages (OSV-Scanner) and lockfiles pointing at
+#                           strange hosts are reported, since removing a
+#                           dependency would break the build
+#   5. Hidden code          injected dropper payloads are cut out of source and
+#                           config files (JavaScript is syntax-checked after the
+#                           cut and put back if it fails); anything else
+#                           suspicious is reported
+#
+# What cannot be fixed safely fails the run and names the file. Paths listed in
+# .security-scan-ignore (one path per line, for a repository's own scanner
+# that contains these strings on purpose) are skipped and printed every run.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: security-scan-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    name: Security scan and auto-fix
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FIX: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_type == 'branch' && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Prepare the checks
+        shell: bash
+        run: |
+          mkdir -p /tmp/sec && : > /tmp/sec/fixed && : > /tmp/sec/unfixed
+          cat > /tmp/sec/lib.sh <<'LIB'
+          SELF=".github/workflows/security-scan.yml"
+          IGNORE_FILE=".security-scan-ignore"
+          MARKER="global\.i *= *['\"\`]A[0-9]|global\[ *['\"\`]! *['\"\`] *\] *= *['\"\`]8-"
+          STEP_FAIL=0
+          list_files() {
+            git ls-files | grep -vxF "$SELF" | if [ -f "$IGNORE_FILE" ]; then grep -vxF -f <(grep -vE '^[[:space:]]*(#|$)' "$IGNORE_FILE"); else cat; fi
+          }
+          fixed()   { echo "FIXED  $1: $2"; echo "$1: $2" >> /tmp/sec/fixed; echo "::warning file=$1::Removed: $2"; }
+          unfixed() { echo "FOUND  $1: $2"; echo "$1: $2" >> /tmp/sec/unfixed; echo "::error file=$1::$2"; STEP_FAIL=1; }
+          # Cut an injected payload out of a file. 0 when the file is clean and still parses.
+          strip_payload() {
+            local f="$1" backup
+            backup=$(mktemp); cp "$f" "$backup"
+            perl -0pi -e 's/[ \t]*(?:global\.i\s*=\s*[\x27"\x60]A[0-9]|global\[\s*[\x27"\x60]!\s*[\x27"\x60]\s*\]\s*=\s*[\x27"\x60]8-)[^\n]*//g' "$f"
+            if ! grep -vE 'createRequire' "$f" | grep -qE '\brequire\('; then
+              perl -0pi -e 's/^[ \t]*import\s*\{\s*createRequire\s*\}\s*from\s*[\x27"](?:node:)?module[\x27"];?[ \t]*\n//mg; s/^[ \t]*const\s+require\s*=\s*createRequire\(import\.meta\.url\);?[ \t]*\n//mg' "$f"
+            fi
+            if grep -qE "$MARKER" "$f"; then cp "$backup" "$f"; return 1; fi
+            case "$f" in
+              *.js|*.cjs|*.mjs) if ! node --check "$f" > /dev/null 2>&1; then cp "$backup" "$f"; return 1; fi ;;
+            esac
+            return 0
+          }
+          [ -f "$IGNORE_FILE" ] && echo "Ignoring: $(grep -vE '^[[:space:]]*(#|$)' "$IGNORE_FILE" | tr '\n' ' ')"
+          echo "Auto-fix: $([ "$FIX" = 1 ] && echo on || echo 'off (report only)')"
+          LIB
+          cat > /tmp/sec/vscode.js <<'JS'
+          // Reads VS Code's JSON-with-comments files. Exit: 0 clean, 2 found (not fixed),
+          // 3 found and cannot be fixed, 4 fixed.
+          const fs = require('fs');
+          const [mode, file, fix] = process.argv.slice(2);
+          function stripJsonc(t) {
+            let o = '', s = false, e = false;
+            for (let i = 0; i < t.length; i++) {
+              const c = t[i];
+              if (s) { o += c; if (e) e = false; else if (c === '\\') e = true; else if (c === '"') s = false; continue; }
+              if (c === '"') { s = true; o += c; continue; }
+              if (t.startsWith('//', i)) { const j = t.indexOf('\n', i); i = j === -1 ? t.length : j - 1; continue; }
+              if (t.startsWith('/*', i)) { const j = t.indexOf('*/', i + 2); i = j === -1 ? t.length : j + 1; continue; }
+              o += c;
+            }
+            return o.replace(/,(\s*[}\]])/g, '$1');
+          }
+          let data;
+          try { data = JSON.parse(stripJsonc(fs.readFileSync(file, 'utf8'))); } catch (err) { console.log('UNPARSEABLE'); process.exit(3); }
+          const RUNNER = /\b(node|nodejs|deno|bun|python3?|bash|sh|zsh|pwsh|powershell|curl|wget|iex|osascript)\b/i;
+          const ASSET = /\.(woff2?|ttf|otf|eot|png|jpe?g|gif|ico|svg|webp|bmp|mp3|mp4|wav)\b/i;
+          const write = () => fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
+          if (mode === 'tasks') {
+            const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+            const bad = [];
+            tasks.forEach((t, i) => {
+              if (!t || typeof t !== 'object') return;
+              const parts = [t.command, t.args];
+              for (const k of ['osx', 'linux', 'windows']) if (t[k]) parts.push(t[k].command, t[k].args);
+              const cmd = parts.filter(Boolean).map((p) => (typeof p === 'string' ? p : JSON.stringify(p))).join(' ');
+              const onOpen = (t.runOptions || {}).runOn === 'folderOpen';
+              const hidden = t.hide === true || (t.presentation || {}).reveal === 'never';
+              if ((onOpen && (RUNNER.test(cmd) || ASSET.test(cmd) || hidden)) || (ASSET.test(cmd) && RUNNER.test(cmd))) {
+                bad.push(i);
+                console.log(`task "${t.label || '?'}" runs ${onOpen ? 'on folder open' : 'an asset file'}: ${cmd.slice(0, 150)}`);
+              }
+            });
+            if (!bad.length) process.exit(0);
+            if (fix !== '1') process.exit(2);
+            const keep = tasks.filter((_, i) => !bad.includes(i));
+            if (keep.length) { data.tasks = keep; write(); } else { fs.unlinkSync(file); }
+            process.exit(4);
+          }
+          if (mode === 'settings') {
+            let exit = 0;
+            if (String(data['task.allowAutomaticTasks'] || '').toLowerCase() === 'on') {
+              console.log('task.allowAutomaticTasks is on');
+              if (fix === '1') { delete data['task.allowAutomaticTasks']; write(); exit = 4; } else exit = 2;
+            }
+            for (const [k, v] of Object.entries(data)) {
+              if (/^terminal\.integrated\..*(args|env)/i.test(k) && /\b(curl|wget|node\s+-e|base64|iex)\b/i.test(JSON.stringify(v))) {
+                console.log(`${k} makes new terminals run a command`);
+                exit = 3;
+              }
+            }
+            process.exit(exit);
+          }
+          JS
+          echo "Ready."
+
+      - name: 1. .vscode folder
+        if: always()
+        shell: bash
+        run: |
+          # GitHub starts steps with `bash -e`; a search that finds nothing must not end the step.
+          set +e -uo pipefail
+          source /tmp/sec/lib.sh
+          files=$(list_files | grep -E '(^|/)\.vscode/' || true)
+          if [ -z "$files" ]; then echo "RESULT: no .vscode folder"; exit 0; fi
+          while IFS= read -r f; do
+            [ -f "$f" ] || continue
+            echo "checking $f"
+            case "${f,,}" in
+              *.js|*.cjs|*.mjs|*.ts|*.sh|*.py|*.ps1|*.bat|*.cmd|*.exe|*.bin|*.dll|*.so|*.dylib|*.woff|*.woff2|*.ttf|*.otf|*.eot|*.png|*.jpg|*.jpeg|*.gif|*.ico)
+                if [ "$FIX" = 1 ]; then rm -f "$f"; fixed "$f" "script, binary or asset kept inside .vscode"; else unfixed "$f" "script, binary or asset kept inside .vscode"; fi
+                continue ;;
+            esac
+            case "$f" in
+              *tasks.json)
+                out=$(node /tmp/sec/vscode.js tasks "$f" "$FIX"); code=$?
+                case "$code" in
+                  4) fixed "$f" "removed auto-run task(s): $(echo "$out" | tr '\n' ' ')" ;;
+                  2) unfixed "$f" "auto-run task: $(echo "$out" | tr '\n' ' ')" ;;
+                  3) grep -qE '"runOn"[[:space:]]*:[[:space:]]*"folderOpen"' "$f" && unfixed "$f" "has a folder-open task but could not be parsed" ;;
+                esac ;;
+              *settings.json)
+                out=$(node /tmp/sec/vscode.js settings "$f" "$FIX"); code=$?
+                case "$code" in
+                  4) fixed "$f" "$(echo "$out" | tr '\n' ' ')" ;;
+                  2|3) unfixed "$f" "$(echo "$out" | tr '\n' ' ')" ;;
+                esac ;;
+              *launch.json)
+                if grep -qiE '"(program|runtimeExecutable|runtimeArgs)".*\.(woff2?|ttf|otf|png|jpe?g|gif|ico)' "$f"; then
+                  unfixed "$f" "a launch configuration runs a font or image file"
+                fi ;;
+            esac
+            if [ -f "$f" ] && grep -qaE "$MARKER" "$f"; then
+              if [ "$FIX" = 1 ]; then rm -f "$f"; fixed "$f" "dropper code inside .vscode"; else unfixed "$f" "dropper code inside .vscode"; fi
+            fi
+          done <<< "$files"
+          [ "$STEP_FAIL" = 0 ] && echo "RESULT: .vscode folder is clean now"
+          exit $STEP_FAIL
+
+      - name: 2. Fonts, images and media
+        if: always()
+        shell: bash
+        run: |
+          # GitHub starts steps with `bash -e`; a search that finds nothing must not end the step.
+          set +e -uo pipefail
+          source /tmp/sec/lib.sh
+          checked=0
+          while IFS= read -r f; do
+            [ -f "$f" ] && [ -s "$f" ] || continue
+            checked=$((checked + 1))
+            ext="${f##*.}"; ext="${ext,,}"
+            if [ "$ext" = "svg" ]; then
+              grep -qiE '<script|javascript:|global\.i *=|child_process' "$f" && unfixed "$f" "an SVG that carries script"
+              continue
+            fi
+            mime=$(file --brief --mime-type "$f")
+            reason=""
+            case "$mime" in
+              text/*|application/javascript|application/x-javascript|application/json|application/x-sh|application/x-shellscript)
+                reason="named .$ext but it is $mime (code disguised as a font, image or media file)" ;;
+            esac
+            if grep -qaE "$MARKER|child_process|eth_getTransactionCount|eth_getBlockByNumber" "$f"; then
+              reason="JavaScript dropper code inside a .$ext file"
+            fi
+            [ -z "$reason" ] && continue
+            if [ "$FIX" = 1 ]; then rm -f "$f"; fixed "$f" "$reason"; else unfixed "$f" "$reason"; fi
+          done < <(list_files | grep -iE '\.(woff2?|ttf|otf|eot|png|jpe?g|gif|webp|ico|bmp|tiff?|svg|mp3|mp4|m4a|mov|wav|ogg|webm|pdf)$')
+          echo "Checked $checked font, image and media files."
+          [ "$STEP_FAIL" = 0 ] && echo "RESULT: every asset is what its extension says"
+          exit $STEP_FAIL
+
+      - name: 3. Antivirus (ClamAV) on every file
+        if: always()
+        shell: bash
+        run: |
+          # GitHub starts steps with `bash -e`; a search that finds nothing must not end the step.
+          set +e -uo pipefail
+          source /tmp/sec/lib.sh
+          docker run --rm --entrypoint clamscan -v "$GITHUB_WORKSPACE:/scandir:ro" clamav/clamav:stable \
+            --recursive --infected --no-summary --exclude-dir='^/scandir/\.git$' /scandir > /tmp/sec/clam.txt 2> /tmp/sec/clam.err
+          code=$?
+          cat /tmp/sec/clam.txt
+          if [ "$code" -gt 1 ]; then
+            tail -20 /tmp/sec/clam.err
+            echo "::error::ClamAV could not complete the scan (exit $code)"; exit 1
+          fi
+          while IFS= read -r line; do
+            path="${line%%: *}"; path="${path#/scandir/}"; sig="${line#*: }"; sig="${sig% FOUND}"
+            [ -f "$path" ] || continue
+            if grep -qxF "$path" <(grep -vE '^[[:space:]]*(#|$)' "$IGNORE_FILE" 2>/dev/null); then continue; fi
+            case "${path,,}" in
+              *.js|*.cjs|*.mjs|*.ts|*.tsx|*.jsx|*.dart|*.py|*.java|*.kt|*.swift|*.go|*.rb|*.php|*.json|*.gradle|*.yml|*.yaml|*.sh)
+                unfixed "$path" "ClamAV: $sig (a source file, so it is left for a person)" ;;
+              *)
+                if [ "$FIX" = 1 ]; then rm -f "$path"; fixed "$path" "ClamAV: $sig"; else unfixed "$path" "ClamAV: $sig"; fi ;;
+            esac
+          done < <(grep ' FOUND$' /tmp/sec/clam.txt)
+          [ "$STEP_FAIL" = 0 ] && echo "RESULT: ClamAV found nothing left"
+          exit $STEP_FAIL
+
+      - name: 4. Dependencies (npm, yarn, Flutter, CocoaPods, Gradle ...)
+        if: always()
+        shell: bash
+        run: |
+          # GitHub starts steps with `bash -e`; a search that finds nothing must not end the step.
+          set +e -uo pipefail
+          source /tmp/sec/lib.sh
+          lifecycle='^(pre|post)?install$|^prepare$|^prepack$|^postpack$|^prepublish(Only)?$'
+          removable='\.(woff2?|ttf|otf|eot|png|jpe?g|gif|ico|svg)|(curl|wget)[^|]*\|[[:space:]]*(ba|z)?sh|node +-e|base64 +(-d|--decode)|\beval\b'
+          while IFS= read -r f; do
+            [ -f "$f" ] || continue
+            while IFS=$'\t' read -r key value; do
+              [ -z "$key" ] && continue
+              if echo "$value" | grep -qiE "$removable" && [ "$FIX" = 1 ]; then
+                tmp=$(mktemp); jq --arg k "$key" 'del(.scripts[$k])' "$f" > "$tmp" && mv "$tmp" "$f"
+                fixed "$f" "removed the $key script: $value"
+              else
+                unfixed "$f" "$key script runs something risky: $value"
+              fi
+            done < <(jq -r --arg re "$lifecycle" '(.scripts // {}) | to_entries[] | select(.key | test($re))
+              | select(.value | test("curl|wget|base64|\\beval\\b|node +-e|https?://|powershell|\\.(woff2?|ttf|otf|eot|png|jpe?g|gif|ico|svg)"; "i"))
+              | [.key, .value] | @tsv' "$f" 2>/dev/null)
+          done < <(list_files | grep -E '(^|/)package\.json$')
+          while IFS= read -r f; do
+            hosts=$(grep -oE '(resolved|tarball)"?:? *"?https?://[^/" ]+' "$f" | sed -E 's#.*https?://##' | sort -u \
+              | grep -vxE 'registry\.yarnpkg\.com|registry\.npmjs\.org' || true)
+            [ -n "$hosts" ] && unfixed "$f" "packages downloaded from outside the npm registry: $(echo $hosts)"
+          done < <(list_files | grep -E '(^|/)(yarn\.lock|package-lock\.json|pnpm-lock\.yaml|npm-shrinkwrap\.json)$')
+
+          curl -fsSL -o /tmp/sec/osv-scanner https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64 \
+            && chmod +x /tmp/sec/osv-scanner
+          if [ -x /tmp/sec/osv-scanner ]; then
+            if /tmp/sec/osv-scanner --version 2>&1 | grep -qE 'version: ?1\.'; then
+              /tmp/sec/osv-scanner --recursive --format json . > /tmp/sec/osv.json 2> /tmp/sec/osv.err
+            else
+              /tmp/sec/osv-scanner scan source --recursive --format json . > /tmp/sec/osv.json 2> /tmp/sec/osv.err
+            fi
+            if jq -e . /tmp/sec/osv.json > /dev/null 2>&1; then
+              while IFS= read -r line; do
+                [ -n "$line" ] && unfixed "dependencies" "known malicious package: $line"
+              done < <(jq -r '[.results[]? | .source.path as $src | .packages[]? | .package as $p | .vulnerabilities[]?
+                | select(.id | startswith("MAL-")) | "\($p.name)@\($p.version) (\(.id)) in \($src)"] | unique[]' /tmp/sec/osv.json)
+              vulns=$(jq '[.results[]?.packages[]?.vulnerabilities[]?] | length' /tmp/sec/osv.json)
+              [ "$vulns" != "0" ] && echo "::warning::$vulns known vulnerabilities in dependencies (not malware)" \
+                && jq -r '.results[]?.packages[]? | "  \(.package.name)@\(.package.version): \([.vulnerabilities[]?.id] | join(", "))"' /tmp/sec/osv.json | head -40
+            else
+              echo "OSV-Scanner found no manifests or lockfiles to check."
+            fi
+          else
+            echo "::warning::OSV-Scanner could not be downloaded, so packages were not checked this run"
+          fi
+          [ "$STEP_FAIL" = 0 ] && echo "RESULT: no malicious dependencies or install scripts"
+          exit $STEP_FAIL
+
+      - name: 5. Hidden code in source and configs
+        if: always()
+        shell: bash
+        run: |
+          # GitHub starts steps with `bash -e`; a search that finds nothing must not end the step.
+          set +e -uo pipefail
+          source /tmp/sec/lib.sh
+          list_files | grep -iE '\.(js|cjs|mjs|ts|cts|mts|tsx|jsx|dart|json|html?|vue|svelte|py|sh|ya?ml|gradle|kts?|swift|java|php|rb|go|xml|plist|ps1|bat|cmd)$' \
+            | grep -viE '\.min\.[cm]?js$|\.map$|(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|pubspec\.lock|Podfile\.lock)$' \
+            | while IFS= read -r f; do [ -f "$f" ] && echo "$f"; done > /tmp/sec/files.txt
+          echo "Checking $(wc -l < /tmp/sec/files.txt) source and config files."
+          [ -s /tmp/sec/files.txt ] || { echo "RESULT: no source files"; exit 0; }
+
+          while IFS= read -r f; do
+            if [ "$FIX" = 1 ] && strip_payload "$f"; then
+              fixed "$f" "cut out an injected dropper payload"
+            else
+              unfixed "$f" "injected dropper payload$([ "$FIX" = 1 ] && echo ' (could not be cut out cleanly)')"
+            fi
+          done < <(tr '\n' '\0' < /tmp/sec/files.txt | xargs -0 grep -lIE "$MARKER" 2>/dev/null)
+
+          while IFS= read -r hit; do
+            unfixed "${hit%%:*}" "known dropper signature at line $(echo "$hit" | cut -d: -f2)"
+          done < <(tr '\n' '\0' < /tmp/sec/files.txt | xargs -0 grep -nIE \
+            -e 'wuqktamceigynzbosdctpusocrjhrflovnxrt' -e 'run_loader|_global\._H2' \
+            -e "spawn\([^)]{0,60}['\"\`]-e['\"\`]" 2>/dev/null | cut -c1-200)
+
+          while IFS= read -r hit; do
+            unfixed "${hit%%:*}" "code hidden after a long run of whitespace at line $(echo "$hit" | cut -d: -f2)"
+          done < <(tr '\n' '\0' < /tmp/sec/files.txt | xargs -0 grep -nIP '[ \t]{150,}[^ \t\r]' 2>/dev/null | cut -c1-200)
+
+          while IFS= read -r f; do
+            grep -qE "child_process|spawn\(|detached *:" "$f" \
+              && unfixed "$f" "blockchain lookup plus process spawn (how the dropper finds and starts its second stage)"
+          done < <(tr '\n' '\0' < /tmp/sec/files.txt | xargs -0 grep -lIE 'eth_getTransactionCount|eth_getBlockByNumber|api\.trongrid\.io' 2>/dev/null)
+
+          while IFS= read -r f; do
+            long=$(awk 'length($0) > 2000 { print NR ":" length($0); exit }' "$f")
+            [ -n "$long" ] && unfixed "$f" "a ${long#*:}-character line in a build config (line ${long%%:*})"
+          done < <(grep -iE '(^|/)((vite|vitest|postcss|babel|eslint|metro|tailwind|next|webpack|rollup|jest|nuxt|svelte|astro|app|expo|craco)\.config\.[cm]?[jt]s|\.babelrc(\.js)?|\.eslintrc(\.c?js)?|gulpfile\.js|Gruntfile\.js)$' /tmp/sec/files.txt)
+
+          [ "$STEP_FAIL" = 0 ] && echo "RESULT: no hidden code left"
+          exit $STEP_FAIL
+
+      - name: Commit the fixes
+        if: always() && env.FIX == '1'
+        shell: bash
+        run: |
+          # GitHub starts steps with `bash -e`; a search that finds nothing must not end the step.
+          set +e -uo pipefail
+          if [ -z "$(git status --porcelain)" ]; then echo "Nothing needed fixing."; exit 0; fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          {
+            echo "Remove injected malware (Security Scan auto-fix)"
+            echo
+            echo "Found and removed automatically on push:"
+            echo
+            sed 's/^/- /' /tmp/sec/fixed
+          } > /tmp/sec/message.txt
+          git commit -q -F /tmp/sec/message.txt || { echo "::error::Could not commit the fixes"; exit 1; }
+          git push origin "HEAD:${GITHUB_REF_NAME}" || { echo "::error::Could not push the fixes to ${GITHUB_REF_NAME}"; exit 1; }
+          echo "Fixes pushed to ${GITHUB_REF_NAME}."
+
+      - name: Result
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Security Scan"
+            if [ -s /tmp/sec/fixed ]; then echo "### Removed automatically"; sed 's/^/- /' /tmp/sec/fixed; fi
+            if [ -s /tmp/sec/unfixed ]; then echo "### Needs a person"; sed 's/^/- /' /tmp/sec/unfixed; fi
+            if [ ! -s /tmp/sec/fixed ] && [ ! -s /tmp/sec/unfixed ]; then echo "All five checks are clean."; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -s /tmp/sec/unfixed ]; then
+            echo "::error::Security Scan found things it could not remove safely. See the run summary."
+            exit 1
+          fi

@@ -1,0 +1,3 @@
+# Heron's own malware scanners contain the strings they look for.
+scripts/scan-machine.py
+scripts/scan-supply-chain.py
