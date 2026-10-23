@@ -80,10 +80,21 @@ NETWORK_EXEMPT = (
     "CLAUDE.md", "CONTRIBUTING.md",
 )
 
-# These two files quote the signatures above verbatim, so they match
-# themselves. Their contents are reviewable in the repository like any other
-# source file; skipping them here is what keeps the signal honest.
-SELF = ("scripts/scan-supply-chain.py", "scripts/scan-machine.py")
+# These files quote the signatures above verbatim, so they match themselves.
+# Their contents are reviewable in the repository like any other source file;
+# skipping them here is what keeps the signal honest.
+#
+# `security-scan.yml` joined the list on 23 Oct 2026. It is the repository's
+# other detector and it greps for the same indicators, the IOC hostname at its
+# line 326 among them, so every scheduled run from 14 Sep reported it as
+# "known IOC string, blockchain-resolved C2" and failed. Nothing was wrong
+# with the file.
+SELF = (
+    "scripts/scan-supply-chain.py",
+    "scripts/scan-machine.py",
+    ".github/workflows/security-scan.yml",
+    ".github/scripts/malware_scan.py",
+)
 
 FONT_MAGIC = {
     ".woff": (b"wOFF",),
